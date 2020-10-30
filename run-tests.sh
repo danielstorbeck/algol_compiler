@@ -1,2 +1,2 @@
 cd test
-bash test.sh
+bash run-system-tests.sh

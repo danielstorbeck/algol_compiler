@@ -1,5 +1,7 @@
 # system tests
 
+echo ""
+echo "endless loop test"
 # test0.algo contains the character '
 # this provokes an endless loop in the parser
 # the error messages appear on stderr
@@ -7,8 +9,8 @@
 # the idiom "cmd1 < <( cmd2 ) directs the output of cmd2
 # into cmd1 without using a pipe
 # therefore cmd1 can stop processing without waiting for cmd2 to end
-bash detect-loop.sh < <( ../a.out algol/test0.algol 2>&1 )
-# detect-loop.sh's exit status is waiting in the variable '?'
+bash test0.sh < <( ../a.out algol/test0.algol 2>&1 )
+# test0.sh's exit status is waiting in the variable '?'
 if (( ${?} == 1 ))
 then
     echo "test 0 passed: the endless loop still occurs"
@@ -17,3 +19,7 @@ else if (( ${?} == 0 ))
 	 echo "!test 0 FAILED: the endless loop doesn't occur any more"
      fi
 fi
+
+echo ""
+echo "comparing generated asm to originally generated asm"
+bash compilation-tests.sh
