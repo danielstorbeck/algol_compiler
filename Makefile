@@ -13,4 +13,5 @@ lex.yy.c: lexer.l
 	$(LEX) -w -i lexer.l
 clean:
 	rm *.o
-
+check:
+	bash run-tests.sh
