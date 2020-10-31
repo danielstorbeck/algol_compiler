@@ -8,7 +8,7 @@ y.tab.c y.tab.h: parser.y
 y.tab.o: y.tab.c
 	$(CC) -w -m32 -c y.tab.c
 lex.yy.o: y.tab.h lex.yy.c
-	$(CC) -w -m32 -c lex.yy.c
+	$(CC) -m32 -c lex.yy.c
 lex.yy.c: lexer.l
 	$(LEX) -w -i lexer.l
 clean:

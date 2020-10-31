@@ -7,6 +7,8 @@
 #include "tree.c"
 #include <stdbool.h>
 #include "symbolTable.h"
+#include "scopeStack.h"
+
 int globalLevel=0;
 extern int yylval;
 extern char* yytext;

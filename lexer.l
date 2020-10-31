@@ -1,10 +1,12 @@
 %{
-# include <stdio.h>
+
+#include <stdio.h>
 #include <ctype.h>
 #include <math.h>
 #include <string.h>
 #include <stdbool.h>
 #include "y.tab.h"
+#include "scopeStack.h"
 
 int lineNo = 1;
 extern int globalLevel;
