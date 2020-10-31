@@ -12,11 +12,11 @@ TODOs
 * extract backend
 * cover components with unit tests
 * extract components like tree node, stack for lexical scoping etc.
-* fix warnings. all warnings are currently switched off
 
 DONE
 ====
 
+* fix warnings. all warnings were switched off
 * move development to x86_64 platform
 * create minimal framework for system tests using the algol example code files
 * remove garbage
