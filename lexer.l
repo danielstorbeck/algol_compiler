@@ -80,12 +80,15 @@ COMMENT[^.;]*;		{char *tempString = (char *)yytext;
 "**"			{return TOKEN_POWER;}
 
 {relational_operator}	{return TOKEN_REL_OP;}
-"<"			{return TOKEN_LESS ;}
-"<="			{return TOKEN_LESS_EQUAL ;}
-"="			{return TOKEN_EQUAL ;}
-">"			{return TOKEN_GREATER ;}
-">="			{return TOKEN_GREATER_EQUAL ;}
-"<>"			{return TOKEN_NOTEQUAL ;}
+
+ /* 
+  "<"			{return TOKEN_LESS ;}
+  "<="			{return TOKEN_LESS_EQUAL ;}
+  "="			{return TOKEN_EQUAL ;}
+  ">"			{return TOKEN_GREATER ;}
+  ">="			{return TOKEN_GREATER_EQUAL ;}
+  "<>"			{return TOKEN_NOTEQUAL ;}
+ */
 
 ","			{return TOKEN_COMMA ;}
 ";"			{return TOKEN_SEMICOLON ;}
