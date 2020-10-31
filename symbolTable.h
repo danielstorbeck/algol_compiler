@@ -1,5 +1,6 @@
 #include <stdbool.h>
-typedef struct{
+
+typedef struct Symbol {
 	char *lexeme;
 	int token;
 	int value;
@@ -12,9 +13,9 @@ typedef struct{
 	int lowerBound[20];
 	int upperBound[20]; 
 	struct Symbol *next;
-}Symbol;
+} Symbol;
 	
-typedef struct{
+typedef struct SymbolTable {
 	Symbol *head;
 	Symbol *currentSymbol;
 	Symbol *tail;
@@ -22,4 +23,4 @@ typedef struct{
 	int arrayOffset;
 	int currentOffset;
 	int newTempOffset;
-}SymbolTable;
+} SymbolTable;

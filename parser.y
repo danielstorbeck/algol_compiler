@@ -9,8 +9,10 @@
 #include "symbolTable.h"
 #include "scopeStack.h"
 
+#define YYSTYPE Node *
+
 int globalLevel=0;
-extern int yylval;
+extern Node* yylval;
 extern char* yytext;
 int numOfErrors=0;
 
@@ -52,7 +54,7 @@ int pop(){
 extern int yylex();
 
 extern int lineNo ; 
-int yylval;
+Node * yylval;
 extern char* yytext;
 
 extern FILE *yyin;
@@ -130,21 +132,18 @@ void symbolTableDisplay(int scope){
 	while (entry !=NULL){
 		if (entry->lexeme != NULL)	
 			printf("lexeme: %s\n",entry->lexeme);
-		if (entry->token != NULL)	
-			printf("token :%d\n",entry->token);
+		printf("token :%d\n",entry->token);
 		if (entry->value || entry->value==0)	
 			printf("intValue: %d\n",entry->value);
 		if (entry->realValue || entry->realValue==0.0)				
 		{			
 			printf("realValue: %f \n",entry->realValue);
 		}
-		if (entry->boolean != NULL)	
-			printf("boolean: %d\n",entry->boolean); 
-		if (entry->dim != NULL)	
-			printf("dim: %d\n",entry->dim);
-			for(i=0;i<entry->dim;i++){
-				printf("lower: %d, upper: %d\n",entry->lowerBound[i],entry->upperBound[i]);
-			}
+		printf("boolean: %d\n",entry->boolean); 
+		printf("dim: %d\n",entry->dim);
+		for(i=0;i<entry->dim;i++){
+			printf("lower: %d, upper: %d\n",entry->lowerBound[i],entry->upperBound[i]);
+		}
 		if (entry->type || entry->type==0)	
 			printf("type: %d\n",entry->type);
 		if (entry->offset || entry->offset==0)	
@@ -156,18 +155,14 @@ void symbolTableDisplay(int scope){
 void displayNode(Node *node){
 	printf("PRINTING Node:\n");
 	printf("LEXEME: %s",node->identLex);
-	if(node->semTypeDef != NULL){
-		printf("SEMTYPEDEF: %d",node->semTypeDef);}
-	if(node->intValue != NULL){
-		printf("INTEGER VALUE: %d",node->intValue);}
+	printf("SEMTYPEDEF: %d",node->semTypeDef);
+	printf("INTEGER VALUE: %d",node->intValue);
 	if(!(node->realValue)){
 		printf("REAL VALUE: %f",node->realValue);}
 	if(node->boolValue){
 		printf("BOOLVALUE: TRUE");}
-	if(node->type != NULL){
-		printf("TYPE: %d",node->type);}
-	if(node->dim != NULL){
-		printf("Track: %d",node->dim);}
+	printf("TYPE: %d",node->type);
+	printf("Track: %d",node->dim);
 }
 
 int getNewLabel(){
@@ -410,7 +405,7 @@ label :
 	{
 		Node* newNode = createNode();
 		Node* tempNode = $1;
-		strcpy(newNode->identLex,atoi(tempNode->intValue));
+		sprintf(newNode->identLex, "%d", tempNode->intValue);
 		$$=newNode;
 	}
 	;
@@ -1502,8 +1497,8 @@ simpleBoolean:
 		newNode->pt2 = $3;
 		Node* tempNode1 = $1;
 		Node* tempNode2 = $3;
-		int label1 = getNewLabel;
-		int label2 = getNewLabel;
+		int label1 = getNewLabel();
+		int label2 = getNewLabel();
 		sprintf(newNode->code,"%s%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nbeq\t$t0,$t1,label%d\nli\t$t2,0\nb\tlabel%d\nlabel%d:\nli\t$t2,1\nlabel%d:\nsw\t$t2,%d($sp)\n",tempNode1->code,tempNode2->code,tempNode1->place,tempNode2->place,label1,label2,label1,label2,tempNode1->place);
 		newNode->place = tempNode1->place;
 
@@ -2817,13 +2812,13 @@ int main(int argc, char* argv[])
 	    while(yyparse() != 0)
 		;
 	}
+	//printf("%s",code);
 	//check while merging the codes
-	char * code1[99999];
+	char code1[99999];
 	strcpy(code1,"b\tmain\n");
 	strcat(code1,code);
 	strcat(code1,"jr\t$ra");
 	strcat(code1,"\n\n\t.data\nMSG:\t.asciiz \"\\n OUTPUT = \"");
-	////printf("%s",code);
 	FILE* fp1 = fopen("code1.asm","w");
 	fprintf(fp1,"%s",code1);
 	return 0;

@@ -64,7 +64,7 @@ enum tag{TOKEN_ID,//TOKEN_SEPARATOR,
 	switchIdentifier
 
 };
-typedef struct{
+typedef struct Node {
 	enum tag type;
 	struct Node* parent;
 	int intValue;
@@ -82,5 +82,5 @@ typedef struct{
 	struct Node* pt1;
 	struct Node* pt2;
 	struct Node* pt3;
-}Node;
+} Node;
 
