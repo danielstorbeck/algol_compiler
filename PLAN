@@ -16,7 +16,8 @@ TODOs
 DONE
 ====
 
+* switch to x86_64 executable
 * fix warnings. all warnings were switched off
-* move development to x86_64 platform
+* move development to x86_64 platform but still make the x86 executable
 * create minimal framework for system tests using the algol example code files
 * remove garbage
