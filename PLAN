@@ -1,0 +1,22 @@
+Ordered list of development tasks. Read from bottom to top.
+
+Ideas
+=====
+
+* add backends for other architectures / operating systems
+
+TODOs
+=====
+
+* add backend for x86_64 asm code
+* extract backend
+* cover components with unit tests
+* extract components like tree node, stack for lexical scoping etc.
+* fix warnings. all warnings are currently switched off
+
+DONE
+====
+
+* move development to x86_64 platform
+* create minimal framework for system tests using the algol example code files
+* remove garbage
