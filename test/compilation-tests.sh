@@ -16,7 +16,7 @@ do
     [ -f code1.asm ] \
 	|| echo "!test ${NUMBER} FAILED: no asm code generated"
     # check that asm output is identical to original
-    [ $( diff code1.asm generated-asm/test${NUMBER}.asm | wc -l ) == "0" ] \
+    [ $( diff code1.asm generated-asm/test${NUMBER}.asm 2>&1 | wc -l ) == "0" ] \
 	&& echo "test ${NUMBER} passed: asm code identical to original" \
 		|| echo "!test ${NUMBER} FAILED: asm code not identical to original"
 done
