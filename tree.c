@@ -1,6 +1,6 @@
 #include "tree.h"
 
-Node* createNode(){
+Node* createNode() {
 	Node *newNode = (Node*)malloc(sizeof(Node));
 	newNode->parent = NULL;
 	newNode->pt0 = NULL;

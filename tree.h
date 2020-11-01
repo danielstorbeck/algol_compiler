@@ -1,7 +1,11 @@
+#ifndef TREE_H
+#define TREE_H
+
 # include <stdio.h>
 # include <stdbool.h>
 # include <stdlib.h>
-enum tag{TOKEN_ID,//TOKEN_SEPARATOR,
+
+enum tag {TOKEN_ID,//TOKEN_SEPARATOR,
 	lowerBound,
 	upperBound,
 	boundPair,
@@ -62,8 +66,8 @@ enum tag{TOKEN_ID,//TOKEN_SEPARATOR,
 	actualParameter,
 	procedureHeading,
 	switchIdentifier
-
 };
+
 typedef struct Node {
 	enum tag type;
 	struct Node* parent;
@@ -84,3 +88,6 @@ typedef struct Node {
 	struct Node* pt3;
 } Node;
 
+extern Node* createNode();
+
+#endif /* TREE_H */

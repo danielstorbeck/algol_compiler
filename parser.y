@@ -4,8 +4,8 @@
 #include <ctype.h>
 #include <string.h>
 #include <math.h>
-#include "tree.c"
 #include <stdbool.h>
+#include "tree.h"
 #include "symbolTable.h"
 #include "scopeStack.h"
 
