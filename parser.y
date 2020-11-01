@@ -22,7 +22,6 @@ int paramBelu = 0;
 
 int scopeStack[100];
 int scopeStackTop = 0;
-SymbolTable symbolTable[1000];
 int tempNodeScope;
 int currentScope;
 int currentLabel = 0;
@@ -34,7 +33,7 @@ void push(int num){
 	if(scopeStackTop<100){
 		scopeStack[scopeStackTop] = num;
 		scopeStackTop++;
-		symbolTable[num].parent = currentScope;
+	        setParent(num, currentScope);
 	}
 	else{
 		printf("error: Scope stack overflow\n");
@@ -52,104 +51,14 @@ int pop(){
 }
 
 extern int yylex();
-
 extern int lineNo ; 
 Node * yylval;
 extern char* yytext;
-
 extern FILE *yyin;
-
 
 void yyerror(const char *str)
 {
         fprintf(stderr,"error: encountered on this token->%s\n",yytext);
-}
-
-
-
-Symbol* lookUp(char *lexm,int scope){
-	Symbol *symbolEntry = symbolTable[scope].head;
-
-	while(symbolEntry!=NULL){
-		if(strcmp(lexm,symbolEntry->lexeme)==0){
-			tempNodeScope = scope;
-			return symbolEntry;
-		}
-		else
-			symbolEntry = symbolEntry->next; 
-	}
-	if(scope==0){
-		//printf("error:%s not found in scope %d, \n", scope,lexm);
-		tempNodeScope = -1;
-		return NULL;
-	}
-	else{
-		return lookUp(lexm,symbolTable[scope].parent);
-	}
-}
-
-
-Symbol* lookUpInCurrentScope(char *lexm){
-	Symbol* symbolEntry = symbolTable[currentScope].head;
-	while(symbolEntry != NULL){
-		if(strcmp(lexm,symbolEntry->lexeme)==0){
-			tempNodeScope = scopeId;
-			return symbolEntry;
-		}
-		else 
-			symbolEntry = symbolEntry->next; 
-	}
-	return NULL;
-}
-Symbol* addEntry(char *lexm){
-	//symbolTableDisplay(currentScope);
-	Symbol *symbolEntry = symbolTable[currentScope].head;
-	if(symbolEntry == NULL){
-		Symbol *newNodeEntry = (Symbol*)malloc(sizeof(Symbol));
-		newNodeEntry->lexeme = malloc(strlen(lexm)+1);
-		strcpy(newNodeEntry->lexeme, lexm);
-		newNodeEntry->token = TOKEN_ID;
-		symbolTable[currentScope].head = newNodeEntry;
-		symbolTable[currentScope].head->next = symbolTable[currentScope].tail;
-		symbolTable[currentScope].currentSymbol = symbolTable[currentScope].head;
-		return newNodeEntry;
-	}
-	Symbol *newNodeEntry = (Symbol*)malloc(sizeof(Symbol));
-	newNodeEntry->lexeme = malloc(strlen(lexm)+1);
-	strcpy(newNodeEntry->lexeme, lexm);
-	newNodeEntry->token = TOKEN_ID;
-	symbolTable[currentScope].tail = newNodeEntry;
-	symbolTable[currentScope].tail = symbolTable[currentScope].tail->next;
-	symbolTable[currentScope].currentSymbol->next = newNodeEntry;
-	symbolTable[currentScope].currentSymbol = newNodeEntry;
-	//symbolTableDisplay(currentScope);
-	return newNodeEntry;
-}
-void symbolTableDisplay(int scope){
-	Symbol *entry = symbolTable[scope].head;
-	int i;
-	printf("Symbol Table Scope %d\n",scope);
-	while (entry !=NULL){
-		if (entry->lexeme != NULL)	
-			printf("lexeme: %s\n",entry->lexeme);
-		printf("token :%d\n",entry->token);
-		if (entry->value || entry->value==0)	
-			printf("intValue: %d\n",entry->value);
-		if (entry->realValue || entry->realValue==0.0)				
-		{			
-			printf("realValue: %f \n",entry->realValue);
-		}
-		printf("boolean: %d\n",entry->boolean); 
-		printf("dim: %d\n",entry->dim);
-		for(i=0;i<entry->dim;i++){
-			printf("lower: %d, upper: %d\n",entry->lowerBound[i],entry->upperBound[i]);
-		}
-		if (entry->type || entry->type==0)	
-			printf("type: %d\n",entry->type);
-		if (entry->offset || entry->offset==0)	
-			printf("offset: %d\n",entry->offset);
-		entry = entry->next;
-	}
 }
 
 void displayNode(Node *node){
@@ -170,17 +79,12 @@ int getNewLabel(){
 	return currentLabel;
 }
 
-int getNewTemp(){
-	symbolTable[currentScope].newTempOffset-=4;
-	return symbolTable[currentScope].newTempOffset+4;
-}
-
 int yywrap()
 {
         return 1;
 }
-%} 
  
+%} 
 
 ////////////TOKEN DEFINITIONS/////////////
 
@@ -306,7 +210,7 @@ int yywrap()
 blockHead :
 	TOKEN_BEGIN declaration
 	{
-		currentScope = scopeStack[scopeStackTop-1];
+	        currentScope = scopeStack[scopeStackTop-1];
 		//printf("current Scope = %d\n",currentScope);
 		Node* newNode = createNode();
 		Node* tempNode = $2;
@@ -444,7 +348,7 @@ program :
 
 unlabelledCompound :
 	TOKEN_BEGIN compoundTail{
-		currentScope = scopeStack[scopeStackTop-1];
+	        currentScope = scopeStack[scopeStackTop-1];
 		//printf("current Scope = %d\n",currentScope);
 		Node* newNode = createNode();
 		Node* tempNode = $2;
@@ -663,9 +567,9 @@ arraySegment :
 		Node *tempNodeOne = $1;
 		Node *tempNodeTwo = $3;
 		currentScope = scopeStack[scopeStackTop-1];
-		Symbol* entry = lookUpInCurrentScope(tempNodeOne->identLex);
+		Symbol* entry = lookUpInCurrentScope(tempNodeOne->identLex, currentScope);
 		if(entry==NULL){
-			entry = addEntry(tempNodeOne->identLex);			
+		  entry = addEntry(tempNodeOne->identLex, currentScope);			
 		}
 		int size =1;
 		entry->dim = tempNodeTwo->dim;
@@ -678,8 +582,8 @@ arraySegment :
 			newNode->upperBound[i] = tempNodeTwo->upperBound[i];
 			size = size*(tempNodeTwo->upperBound[i]-tempNodeTwo->lowerBound[i]+1);
 		}
-		entry->offset = symbolTable[currentScope].arrayOffset;
-		symbolTable[currentScope].arrayOffset-=size*4;
+		entry->offset = getArrayOffset(currentScope);
+		setArrayOffset(currentScope, getArrayOffset(currentScope) - size * 4);
 		newNode->identLex = tempNodeOne->identLex;
 		
 		$$ = newNode;
@@ -694,9 +598,9 @@ arraySegment :
 		Node *tempNodeOne = $1;
 		Node *tempNodeTwo = $3;
 		currentScope = scopeStack[scopeStackTop-1];
-		Symbol* entry = lookUpInCurrentScope(tempNodeOne->identLex);
+		Symbol* entry = lookUpInCurrentScope(tempNodeOne->identLex, currentScope);
 		if(entry==NULL){
-			entry = addEntry(tempNodeOne->identLex);			
+		  entry = addEntry(tempNodeOne->identLex, currentScope);			
 		}
 		//Symbol *entry1=lookUpInCurrentScope(tempNodeTwo->identLex);
 		int size =1;
@@ -711,8 +615,8 @@ arraySegment :
 			newNode->upperBound[i] = tempNodeTwo->upperBound[i];
 			size = size*(tempNodeTwo->upperBound[i]-tempNodeTwo->lowerBound[i]+1);
 		}
-		entry->offset = symbolTable[currentScope].arrayOffset;
-		symbolTable[currentScope].arrayOffset-=size*4;
+		entry->offset = getArrayOffset(currentScope);
+		setArrayOffset(currentScope, getArrayOffset(currentScope) - size * 4);
 		newNode->identLex=tempNodeTwo->identLex;
 		strcat(newNode->identLex,",");		
 		strcat(newNode->identLex,tempNodeOne->identLex);
@@ -737,12 +641,12 @@ arrayList :
 		pch = strtok (tempNode1->identLex,",");
   		while (pch != NULL)
   		{
-  			Symbol* symbolEntry=lookUpInCurrentScope(pch);
+		  Symbol* symbolEntry=lookUpInCurrentScope(pch, currentScope);
 			if (symbolEntry!=NULL){
 				symbolEntry->type=tempNode0->semTypeDef;//return 0;
 			}
 			else{
-				symbolEntry = addEntry(pch);
+			  symbolEntry = addEntry(pch, currentScope);
 				symbolEntry->type=tempNode0->semTypeDef;
 				symbolEntry->dim=tempNode1->dim;
 			}
@@ -758,12 +662,12 @@ arrayList :
 		Node* tempNode0=$1;
 		Node* tempNode1=$3;
 		currentScope = scopeStack[scopeStackTop-1];
-		Symbol* symbolEntry=lookUpInCurrentScope(tempNode1->identLex);
+		Symbol* symbolEntry=lookUpInCurrentScope(tempNode1->identLex, currentScope);
 		if (symbolEntry!=NULL){
 			symbolEntry->type=tempNode0->semTypeDef;//return 0;
 		}
 		else{
-			symbolEntry = addEntry(tempNode1->identLex);
+		  symbolEntry = addEntry(tempNode1->identLex, currentScope);
 			symbolEntry->type=tempNode0->semTypeDef;
 			symbolEntry->dim=tempNode1->dim;
 		}
@@ -887,7 +791,7 @@ simpleArithmeticExpression :
 		newNode->intValue = 0-tempNode->intValue;
 		newNode->realValue = 0.0-tempNode->realValue;
 		newNode->semTypeDef=tempNode->semTypeDef ;
-		newNode->place=getNewTemp();
+		newNode->place=getNewTemp(currentScope);
 		//strcpy(newNode->code,tempNode->code);
 		if(tempNode->semTypeDef == storeReal){
 			sprintf(newNode->code,"%s\nli.s\t$f0,0.0\nl.s\t$f1,%d($sp)\nsub\t$f2,$f0,$f1\ns.s\t$f2,%d($sp)\n",tempNode->code,tempNode->place,newNode->place);
@@ -1171,7 +1075,7 @@ primary :
 			newNode->intValue =  foundEntry->value;
 			newNode->realValue = foundEntry->realValue;		
 			newNode->semTypeDef= foundEntry->type ;
-			newNode->place=getNewTemp();
+			newNode->place=getNewTemp(currentScope);
 			int offset;
 			if (tempNode->isArray == 1){
 				offset = tempNode->place;
@@ -1218,7 +1122,7 @@ unsignedNumber :
 		newNode->intValue = tempNode->intValue;
 		newNode->realValue = tempNode->realValue;
 		newNode->semTypeDef=storeReal;
-		newNode->place=getNewTemp();
+		newNode->place=getNewTemp(currentScope);
 		sprintf(newNode->code,"li.s\t$f0,%f\ns.s\t$f0,%d($sp)\n",newNode->realValue,newNode->place);
 		$$ = newNode;
 		//printf("unsignedNumber->real, realval = %f\n",newNode->realValue);	
@@ -1233,7 +1137,7 @@ unsignedNumber :
 		newNode->intValue = tempNode->intValue;
 		newNode->realValue = tempNode->realValue;
 		newNode->semTypeDef=storeInteger;
-		newNode->place=getNewTemp();
+		newNode->place=getNewTemp(currentScope);
 		sprintf(newNode->code,"li\t$t0,%d\nsw\t$t0,%d($sp)\n",newNode->intValue,newNode->place);
 		$$ = newNode;
 		//printf("unsignedNumber->integer, intval = %d\n",newNode->intValue);
@@ -1623,7 +1527,7 @@ booleanSecondary :
 		newNode->type = booleanSecondary;
 		newNode->pt1 = $2;
 		Node* tempNode = $2;
-		newNode->place = getNewTemp();
+		newNode->place = getNewTemp(currentScope);
 		sprintf(newNode->code,"%sli\t$t0,1\nlw\t$t1,%d($sp)\nsub\t$t2,$t0,$t1\nsw\t$t2,%d($sp)\n",tempNode->code,tempNode->place,newNode->place);
 		if (tempNode->semTypeDef==storeBoolean) {  
 			newNode->semTypeDef=storeBoolean ;  
@@ -1691,7 +1595,7 @@ logicalValue:
 	{
 		Node* newNode = createNode();
 		newNode->type = logicalValue;
-		newNode->type = getNewTemp();
+		newNode->type = getNewTemp(currentScope);
 		if (strcmp("true",yytext)==0){
 			newNode->boolValue = true;
 			sprintf(newNode->code,"li\t$t0,1\nsw\t$t0,%d($sp)\n",newNode->place);
@@ -1714,7 +1618,7 @@ relation :
 		Node* tempNode0 = $1;
 		Node* tempNode1 = $2;
 		Node* tempNode2 = $3;
-		newNode->place = getNewTemp();
+		newNode->place = getNewTemp(currentScope);
 		int label1 = getNewLabel();
 		int label2 = getNewLabel();
 		if(strcmp(tempNode1->identLex,">") == 0) 
@@ -1836,21 +1740,21 @@ listType :
 		Node *temp1=$1;
 		//printf("belu listType\n");
 		currentScope = scopeStack[scopeStackTop-1];
-		if (lookUpInCurrentScope(temp1->identLex)!=NULL){
+		if (lookUpInCurrentScope(temp1->identLex, currentScope)!=NULL){
 			//printf("belu if\n");
 			return 0;
 		}
 		else{
 			//printf("belu else\n");			
-			Symbol *newEntry=addEntry(temp1->identLex);
+		  Symbol *newEntry=addEntry(temp1->identLex, currentScope);
 			newEntry->type=temp2->semTypeDef;
-			if(currentGlobalOffset <= symbolTable[currentScope].currentOffset){
+			if(currentGlobalOffset <= getCurrentOffset(currentScope)){
 				newEntry->offset=currentGlobalOffset;//symbolTable[currentScope].currentOffset;
 				currentGlobalOffset-=4;//symbolTable[currentScope].currentOffset-=4;
 			}
 			else{
-				newEntry->offset=symbolTable[currentScope].currentOffset;
-				symbolTable[currentScope].currentOffset-=4;				
+				newEntry->offset=getCurrentOffset(currentScope);
+				setCurrentOffset(currentScope, getCurrentOffset(currentScope) - 4);				
 			}
 			//printf("belu semtypedef : %d\n", newEntry->type);	
 			$$=$0;
@@ -1863,18 +1767,18 @@ listType :
 		Node *temp0=$1;
 		Node *temp1=$3;
 		currentScope = scopeStack[scopeStackTop-1];
-		if (lookUpInCurrentScope(temp1->identLex)!=NULL){
+		if (lookUpInCurrentScope(temp1->identLex, currentScope)!=NULL){
 		}
 		else{
-			Symbol *newEntry=addEntry(temp1->identLex);
+		  Symbol *newEntry=addEntry(temp1->identLex, currentScope);
 			newEntry->type=temp2->semTypeDef;
-			if(currentGlobalOffset <= symbolTable[currentScope].currentOffset){
+			if(currentGlobalOffset <= getCurrentOffset(currentScope)){
 				newEntry->offset=currentGlobalOffset;//symbolTable[currentScope].currentOffset;
 				currentGlobalOffset-=4;//symbolTable[currentScope].currentOffset-=4;
 			}
 			else{
-				newEntry->offset=symbolTable[currentScope].currentOffset;
-				symbolTable[currentScope].currentOffset-=4;				
+				newEntry->offset=getCurrentOffset(currentScope);
+				setCurrentOffset(currentScope, getCurrentOffset(currentScope) - 4);				
 			}
 		}
 		$$=$0;	
@@ -2358,7 +2262,7 @@ procedureStatement :
 			else
 			{*/
 				new->semTypeDef = symbol->type;
-				new->place = getNewTemp();
+				new->place = getNewTemp(currentScope);
 				sprintf(new->code, "sw\t$t0,-996($sp)\nsw\t$t1,-992($sp)\nsw\t$t2,-988($sp)\nsw\t$t3,-984($sp)\nsw\t$t4,-980($sp)\nsw\t$t5,-976($sp)\nsw\t$t6,-972($sp)\nsw\t$t7,-968($sp)\nsw\t$ra,-964($sp)\n%sli\t$t0,100\nsub\t$sp,$sp,$t0\njal\t%s\nli\t$t0,100\nadd\t$sp,$sp,$t0\nlw\t$t0,-996($sp)\nlw\t$t1,-992($sp)\nlw\t$t2,-988($sp)\nlw\t$t3,-984($sp)\nlw\t$t4,-980($sp)\nlw\t$t5,-976($sp)\nlw\t$t6,-972($sp)\nlw\t$t7,-968($sp)\nlw\t$ra,-964($sp)\nsw\t$v0,%d($sp)\n",temp2->code,temp1->identLex,new->place);
 
 			//}
@@ -2472,7 +2376,7 @@ functionDesignator :
 			else
 			{*/
 				new->semTypeDef = symbol->type;
-				new->place = getNewTemp();
+				new->place = getNewTemp(currentScope);
 				sprintf(new->code, "sw\t$t0,-996($sp)\nsw\t$t1,-992($sp)\nsw\t$t2,-988($sp)\nsw\t$t3,-984($sp)\nsw\t$t4,-980($sp)\nsw\t$t5,-976($sp)\nsw\t$t6,-972($sp)\nsw\t$t7,-968($sp)\nsw\t$ra,-964($sp)\n%sli\t$t0,100\nsub\t$sp,$sp,$t0\njal\t%s\nli\t$t0,100\nadd\t$sp,$sp,$t0\nlw\t$t0,-996($sp)\nlw\t$t1,-992($sp)\nlw\t$t2,-988($sp)\nlw\t$t3,-984($sp)\nlw\t$t4,-980($sp)\nlw\t$t5,-976($sp)\nlw\t$t6,-972($sp)\nlw\t$t7,-968($sp)\nlw\t$ra,-964($sp)\nsw\t$v0,%d($sp)\n",temp2->code,temp1->identLex,new->place);
 
 			//}
@@ -2545,18 +2449,18 @@ formalParameter :
 		int oldScope = currentScope;
 		currentScope = globalLevel + 1;
 
-		if (lookUpInCurrentScope(node1->identLex) == NULL){
-			Symbol * entry = addEntry(node1->identLex);
-			entry->offset = symbolTable[currentScope].currentOffset;
-			symbolTable[currentScope].currentOffset-=4;
+		if (lookUpInCurrentScope(node1->identLex, currentScope) == NULL){
+		  Symbol * entry = addEntry(node1->identLex, currentScope);
+			entry->offset = getCurrentOffset(currentScope);
+			setCurrentOffset(currentScope, getCurrentOffset(currentScope) - 4);
 		}
 		else{
 			printf("warning: paramaters,%s already defined\n",node1->identLex);
 		}
 
 		currentScope = oldScope;
-		if (lookUpInCurrentScope(node0->identLex) == NULL){
-			Symbol * entry = addEntry(node1->identLex);
+		if (lookUpInCurrentScope(node0->identLex, currentScope) == NULL){
+		  Symbol * entry = addEntry(node1->identLex, currentScope);
 			entry->procNumParam++;
 		}
 		////printf("formalParmeter->identifer\n");
@@ -2663,8 +2567,8 @@ procedureHeading :
 		node1->parent = node;
 		strcpy(node->identLex, node1->identLex);
 		currentScope = scopeStack[scopeStackTop-1];
-		if (lookUpInCurrentScope(node1->identLex) == NULL){
-			Symbol * entry = addEntry(node1->identLex);
+		if (lookUpInCurrentScope(node1->identLex, currentScope) == NULL){
+		  Symbol * entry = addEntry(node1->identLex, currentScope);
 			entry->procNumParam = 0;
 		}
 		$$ = node;
@@ -2719,7 +2623,7 @@ procedureDeclaration :
 		Node *node2 = $4;
 		Node *node3 = $1;
 		currentScope = scopeStack[scopeStackTop-1];
-		Symbol* symbol = lookUpInCurrentScope(node1->identLex);
+		Symbol* symbol = lookUpInCurrentScope(node1->identLex, currentScope);
 		symbol->type = node3->semTypeDef;
 
 		Node *node = createNode();
@@ -2800,9 +2704,9 @@ int main(int argc, char* argv[])
 	tempNodeScope = currentScope;
    	int i = 0;
 	for(i=0;i<1000;i++){
-		symbolTable[i].currentOffset=0;
-		symbolTable[i].newTempOffset=-1000;
-		symbolTable[i].arrayOffset=-700;
+		setCurrentOffset(i, 0);
+		setNewTempOffset(i, -1000);
+		setArrayOffset(i, -700);
 	}
 	for(i=1;i<argc;i++)
 	{

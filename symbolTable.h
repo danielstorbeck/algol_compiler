@@ -1,4 +1,8 @@
+#ifndef SYMBOLTABLE_H
+#define SYMBOLTABLE_H
+
 #include <stdbool.h>
+#include <string.h>
 
 typedef struct Symbol {
 	char *lexeme;
@@ -24,3 +28,20 @@ typedef struct SymbolTable {
 	int currentOffset;
 	int newTempOffset;
 } SymbolTable;
+
+Symbol* lookUp(char *lexm,int scope);
+Symbol* lookUpInCurrentScope(char *lexm, int scope);
+Symbol* addEntry(char *lexm, int scope);
+
+void symbolTableDisplay(int scope);
+
+int getNewTemp(int scope);
+int getArrayOffset(int idx);
+void setArrayOffset(int idx, int offset);
+int getCurrentOffset(int idx);
+void setCurrentOffset(int idx, int offset);
+int getNewTempOffset(int idx);
+void setNewTempOffset(int idx, int offset);
+void setParent(int idx, int scope);
+
+#endif /* SYMBOLTABLE_H */
