@@ -11,7 +11,6 @@
 
 #define YYSTYPE Node *
 
-int globalLevel=0;
 extern Node* yylval;
 extern char* yytext;
 int numOfErrors=0;
@@ -286,10 +285,7 @@ program :
 		Node* tempNode = $1;
 		strcpy(newNode->code,tempNode->code);
 		strcpy(code,newNode->code);
-		int i;
-		for(i=0; i <= globalLevel; i++){
-			symbolTableDisplay(i);
-		}
+		printSymbolTable();
 		$$=newNode;
 	}
 	
@@ -300,10 +296,7 @@ program :
 		Node* tempNode = $1;
 		strcpy(newNode->code,tempNode->code);
 		strcpy(code,newNode->code);
-		int i;
-		for(i=0; i <= globalLevel; i++){
-			symbolTableDisplay(i);
-		}
+		printSymbolTable();
 		$$=newNode;
 	}
 	
@@ -2411,7 +2404,7 @@ formalParameter :
 		Node *node1 = $1;
 		
 		int oldScope = currentScope;
-		currentScope = globalLevel + 1;
+		currentScope = getGlobalLevel() + 1;
 
 		if (lookUpInCurrentScope(node1->identLex, currentScope) == NULL){
 		  Symbol * entry = addEntry(node1->identLex, currentScope);
@@ -2456,7 +2449,7 @@ identifierList :
 		Node *node1 = $0;
 		Node *node2 = $1;
 		int oldLevel = currentScope;
-		currentScope = globalLevel + 1;
+		currentScope = getGlobalLevel() + 1;
 		//printf("identlist->ident\n");
 		Symbol *symbol1=lookUp(node2->identLex,currentScope);
 		if(symbol1 != NULL)
@@ -2477,7 +2470,7 @@ identifierList :
 		Node *node1 = $1;
 		Node *node2 = $3;
 		int oldLevel = currentScope;
-		currentScope = globalLevel + 1;
+		currentScope = getGlobalLevel() + 1;
 		//printf("identlist->ident\n");
 		Symbol *symbol1=lookUp(node2->identLex,currentScope);
 		if(symbol1 != NULL)

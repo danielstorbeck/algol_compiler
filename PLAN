@@ -11,15 +11,15 @@ TODOs
 * add backend for x86_64 asm code
 * extract backend
 * create a string builder component to collect generated code
+* replace statically allocated data structures with dynamic ones
 * cover components with unit tests
-* extract scope stack as abstract data type component
 * fix endless loop bug when compiling test0.algol
 
 DONE
 ====
 
 * fix tests that compare compiled files with originals
-* tree and symbolTable extracted as abstract data type components
+* tree, symbolTable, and scopeStack extracted as abstract data type components
 * switch to x86_64 executable
 * fix warnings. all warnings were switched off
 * move development to x86_64 platform but still make the x86 executable

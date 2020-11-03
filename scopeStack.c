@@ -3,12 +3,13 @@
 
 int scopeStack[100];
 int scopeStackTop = 0;
+int globalLevel = 0;
 
-void push(int num, int currentScope) {
+void push(int currentScope) {
 	if (scopeStackTop<100) {
-		scopeStack[scopeStackTop] = num;
+		scopeStack[scopeStackTop] = globalLevel;
 		scopeStackTop++;
-	        setParent(num, currentScope);
+	        setParent(globalLevel, currentScope);
 	}
 	else {
 		printf("error: Scope stack overflow\n");
@@ -28,3 +29,18 @@ int pop() {
 int getCurrentScope() {
   return scopeStack[scopeStackTop - 1];
 }
+
+int getGlobalLevel() {
+  return globalLevel;
+}
+
+void increaseGlobalLevel() {
+  globalLevel++;
+}
+
+void printSymbolTable() {
+  int i;
+  for(i=0; i <= globalLevel; i++){
+    symbolTableDisplay(i);
+  }
+}  

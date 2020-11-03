@@ -3,8 +3,11 @@
 
 #include "symbolTable.h"
 
-void push(int, int);
+void push(int);
 int pop();
 int getCurrentScope();
+int getGlobalLevel();
+void increaseGlobalLevel();
+void printSymbolTable();
 
 #endif /* SCOPESTACK_H */

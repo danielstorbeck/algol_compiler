@@ -8,10 +8,9 @@
 #include "y.tab.h"
 #include "scopeStack.h"
 
-int lineNo = 1;
-extern int globalLevel;
 extern int currentScope;
-//#define YY_DECL extern "C" int yylex()
+
+int lineNo = 1;
 
 %}
 
@@ -59,13 +58,13 @@ COMMENT[^.;]*;		{char *tempString = (char *)yytext;
 
 			
 "begin"			{
-			 globalLevel++;
-			 push(globalLevel, currentScope);
+			 increaseGlobalLevel();
+			 push(currentScope);
 			 return TOKEN_BEGIN ;
 			}
 			
 "end"		{
-			 pop(globalLevel);
+			 pop();
 			 return TOKEN_END;}
 
 
