@@ -2,8 +2,11 @@ LEX = lex
 YACC = yacc
 CC = gcc
 
-algol: y.tab.o lex.yy.o symbolTable.o tree.o
-	$(CC) y.tab.o lex.yy.o symbolTable.o tree.o
+algol: y.tab.o lex.yy.o scopeStack.o symbolTable.o tree.o
+	$(CC) y.tab.o lex.yy.o scopeStack.o symbolTable.o tree.o
+
+scopeStack.o: scopeStack.c scopeStack.h symbolTable.h
+	$(CC) -c scopeStack.c scopeStack.h
 
 symbolTable.o: symbolTable.c symbolTable.h tree.h
 	$(CC) -c symbolTable.c symbolTable.h

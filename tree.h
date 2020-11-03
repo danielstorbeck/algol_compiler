@@ -88,6 +88,7 @@ typedef struct Node {
 	struct Node* pt3;
 } Node;
 
-extern Node* createNode();
+Node* createNode();
+void displayNode(Node *node);
 
 #endif /* TREE_H */

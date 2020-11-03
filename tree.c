@@ -12,3 +12,16 @@ Node* createNode() {
 	newNode->isArray = 0;
 	return newNode;	
 }
+
+void displayNode(Node *node) {
+	printf("PRINTING Node:\n");
+	printf("LEXEME: %s",node->identLex);
+	printf("SEMTYPEDEF: %d",node->semTypeDef);
+	printf("INTEGER VALUE: %d",node->intValue);
+	if(!(node->realValue)){
+		printf("REAL VALUE: %f",node->realValue);}
+	if(node->boolValue){
+		printf("BOOLVALUE: TRUE");}
+	printf("TYPE: %d",node->type);
+	printf("Track: %d",node->dim);
+}

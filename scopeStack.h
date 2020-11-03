@@ -1,7 +1,10 @@
 #ifndef SCOPESTACK_H
 #define SCOPESTACK_H
 
-extern void push(int);
-extern int pop();
+#include "symbolTable.h"
+
+void push(int, int);
+int pop();
+int getCurrentScope();
 
 #endif /* SCOPESTACK_H */

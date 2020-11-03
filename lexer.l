@@ -10,6 +10,7 @@
 
 int lineNo = 1;
 extern int globalLevel;
+extern int currentScope;
 //#define YY_DECL extern "C" int yylex()
 
 %}
@@ -59,7 +60,7 @@ COMMENT[^.;]*;		{char *tempString = (char *)yytext;
 			
 "begin"			{
 			 globalLevel++;
-			 push(globalLevel);
+			 push(globalLevel, currentScope);
 			 return TOKEN_BEGIN ;
 			}
 			

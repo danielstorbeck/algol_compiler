@@ -20,35 +20,12 @@ int currentGlobalOffset=0;/////check////////
 
 int paramBelu = 0;
 
-int scopeStack[100];
-int scopeStackTop = 0;
 int tempNodeScope;
 int currentScope;
 int currentLabel = 0;
 char code[99999];
 int scopeId = 0;
 int tableStackTop=0;
-
-void push(int num){
-	if(scopeStackTop<100){
-		scopeStack[scopeStackTop] = num;
-		scopeStackTop++;
-	        setParent(num, currentScope);
-	}
-	else{
-		printf("error: Scope stack overflow\n");
-	}
-}
-
-int pop(){
-	if(scopeStackTop){
-		scopeStackTop--;
-		return scopeStack[scopeStackTop];
-	}
-	else{
-		return -1;
-	}
-}
 
 extern int yylex();
 extern int lineNo ; 
@@ -59,19 +36,6 @@ extern FILE *yyin;
 void yyerror(const char *str)
 {
         fprintf(stderr,"error: encountered on this token->%s\n",yytext);
-}
-
-void displayNode(Node *node){
-	printf("PRINTING Node:\n");
-	printf("LEXEME: %s",node->identLex);
-	printf("SEMTYPEDEF: %d",node->semTypeDef);
-	printf("INTEGER VALUE: %d",node->intValue);
-	if(!(node->realValue)){
-		printf("REAL VALUE: %f",node->realValue);}
-	if(node->boolValue){
-		printf("BOOLVALUE: TRUE");}
-	printf("TYPE: %d",node->type);
-	printf("Track: %d",node->dim);
 }
 
 int getNewLabel(){
@@ -210,7 +174,7 @@ int yywrap()
 blockHead :
 	TOKEN_BEGIN declaration
 	{
-	        currentScope = scopeStack[scopeStackTop-1];
+	        currentScope = getCurrentScope();
 		//printf("current Scope = %d\n",currentScope);
 		Node* newNode = createNode();
 		Node* tempNode = $2;
@@ -348,7 +312,7 @@ program :
 
 unlabelledCompound :
 	TOKEN_BEGIN compoundTail{
-	        currentScope = scopeStack[scopeStackTop-1];
+	        currentScope = getCurrentScope();
 		//printf("current Scope = %d\n",currentScope);
 		Node* newNode = createNode();
 		Node* tempNode = $2;
@@ -387,7 +351,7 @@ compoundTail :
 		newNode->pt0 = $1;
 		Node* tempNode = $1;
 		strcpy(newNode->code, tempNode->code);
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		$$ = newNode;
 	}	
 	|
@@ -566,7 +530,7 @@ arraySegment :
 		newNode->pt2 = $3;
 		Node *tempNodeOne = $1;
 		Node *tempNodeTwo = $3;
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		Symbol* entry = lookUpInCurrentScope(tempNodeOne->identLex, currentScope);
 		if(entry==NULL){
 		  entry = addEntry(tempNodeOne->identLex, currentScope);			
@@ -597,7 +561,7 @@ arraySegment :
 		newNode->pt2 = $3;
 		Node *tempNodeOne = $1;
 		Node *tempNodeTwo = $3;
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		Symbol* entry = lookUpInCurrentScope(tempNodeOne->identLex, currentScope);
 		if(entry==NULL){
 		  entry = addEntry(tempNodeOne->identLex, currentScope);			
@@ -634,7 +598,7 @@ arrayList :
 				
 		Node* tempNode0=$-1;
 		Node* tempNode1=$1;
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		//printf("\n\n%s recieved\n\n",tempNode1->identLex);
 		//printf("arrayList->arraySegment\n");
 		char* pch;
@@ -661,7 +625,7 @@ arrayList :
 	{
 		Node* tempNode0=$1;
 		Node* tempNode1=$3;
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		Symbol* symbolEntry=lookUpInCurrentScope(tempNode1->identLex, currentScope);
 		if (symbolEntry!=NULL){
 			symbolEntry->type=tempNode0->semTypeDef;//return 0;
@@ -1068,7 +1032,7 @@ primary :
 		Node *tempNode = (Node*)$1;
 		////printf("primary->variable, int value=%d\n",newNode->intValue);
 // do type checking and proper lookup
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		Symbol* foundEntry = lookUp(tempNode->identLex,currentScope);
 		if (foundEntry)
 		{	
@@ -1229,7 +1193,7 @@ subscriptedVariable :
 		Node* tempNode1 = $3;
 		//newNode->place = getNewTemp();
 		strcpy(newNode->identLex, tempNode0->identLex);
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		Symbol* foundEntry = lookUp(tempNode0->identLex,currentScope);
 		if(foundEntry==NULL)
 		{
@@ -1329,7 +1293,7 @@ identifier :
 		newNode->type = identifier;
 		//printf("yytext: %s\n",yytext);
 		strcpy(newNode->identLex,yytext);
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		//Symbol* symbol = lookUp(newNode->identLex, currentScope);
 		//if(symbol==NULL){
 		//	//printf("entry not declared \n");
@@ -1559,7 +1523,7 @@ booleanPrimary :
 		newNode->type = variable;
 		newNode->pt0 = $1;
 		Node *tempNode=$1;
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		Symbol* entry = lookUp(tempNode->identLex,currentScope);
 		tempNode->semTypeDef = entry->type;
 		newNode->semTypeDef = tempNode->semTypeDef;
@@ -1739,7 +1703,7 @@ listType :
 
 		Node *temp1=$1;
 		//printf("belu listType\n");
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		if (lookUpInCurrentScope(temp1->identLex, currentScope)!=NULL){
 			//printf("belu if\n");
 			return 0;
@@ -1766,7 +1730,7 @@ listType :
 		Node *temp2=$0;
 		Node *temp0=$1;
 		Node *temp1=$3;
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		if (lookUpInCurrentScope(temp1->identLex, currentScope)!=NULL){
 		}
 		else{
@@ -2102,7 +2066,7 @@ assignmentStatement :
 		Node *tmp1=$1;
 		Node *tmp2=$3;
 		new->semTypeDef=storeVoid;
-		currentScope = scopeStack[scopeStackTop-1];	
+		currentScope = getCurrentScope();	
   		symbol1=lookUp(tmp1->identLex, currentScope);
 		//printf("################### scope parent = %d,current scope=%d and sybol lexeme =  #####################\n",symbolTable[currentScope].parent,currentScope);
 		//printf("################### symbol lexeme = %s #####################\n",symbol1->lexeme);	
@@ -2166,7 +2130,7 @@ assignmentStatement :
 	
 		Node *temp1=$1;
 		Node *temp2=$3;
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		Symbol *symbol2=lookUp(temp1->identLex,currentScope);
 		new->semTypeDef=storeVoid ;  
 		
@@ -2201,7 +2165,7 @@ forStatement :
 		Node *temp3 = $6;
 		Node *temp4 = $8;
 		Node *temp5 = $10;
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		Symbol *symbol=lookUp(temp->identLex,currentScope);
 		if (symbol == NULL) {  
 			temp->semTypeDef=storeError;
@@ -2246,7 +2210,7 @@ procedureStatement :
 		Node *new = createNode();
 		Node *temp1 = $1;
 		Node *temp2 = $2;
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		Symbol *symbol= lookUp(temp1->identLex,currentScope);
 
 		if(symbol == NULL)
@@ -2303,7 +2267,7 @@ actualParameterList :
 	{
 		Node *temp = $-1;
 		Node *temp1 = $1;
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		Symbol* symbol= lookUp(temp1->identLex,currentScope);
 		Node *new = createNode();
 		new->dim = 0;
@@ -2319,7 +2283,7 @@ actualParameterList :
 		Node *temp = $-1;
 		Node *temp3 = $1;
 		Node *temp1 = $3;
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		Symbol* symbol= lookUp(temp->identLex,currentScope);
 		
 		Node *new = createNode();
@@ -2360,7 +2324,7 @@ functionDesignator :
 		Node *new = createNode();
 		Node *temp1 = $1;
 		Node *temp2 = $2;
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		Symbol *symbol= lookUp(temp1->identLex,currentScope);
 
 		if(symbol == NULL)
@@ -2566,7 +2530,7 @@ procedureHeading :
 		Node *node1 = $1;
 		node1->parent = node;
 		strcpy(node->identLex, node1->identLex);
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		if (lookUpInCurrentScope(node1->identLex, currentScope) == NULL){
 		  Symbol * entry = addEntry(node1->identLex, currentScope);
 			entry->procNumParam = 0;
@@ -2596,7 +2560,7 @@ procedureDeclaration :
 	TOKEN_PROCEDURE procedureHeading procedureBody {
 		Node *node1 = $2;
 		Node *node2 = $3;
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		Symbol* symbol = lookUp(node1->identLex, currentScope);////check////
 		symbol->type = storeVoid;
 
@@ -2622,7 +2586,7 @@ procedureDeclaration :
 		Node *node1 = $3;
 		Node *node2 = $4;
 		Node *node3 = $1;
-		currentScope = scopeStack[scopeStackTop-1];
+		currentScope = getCurrentScope();
 		Symbol* symbol = lookUpInCurrentScope(node1->identLex, currentScope);
 		symbol->type = node3->semTypeDef;
 
