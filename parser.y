@@ -7,7 +7,6 @@
 #include <stdbool.h>
 #include "tree.h"
 #include "symbolTable.h"
-#include "scopeStack.h"
 
 #define YYSTYPE Node *
 
@@ -20,7 +19,6 @@ int currentGlobalOffset=0;/////check////////
 int paramBelu = 0;
 
 int tempNodeScope;
-int currentScope;
 int currentLabel = 0;
 char code[99999];
 int scopeId = 0;
@@ -173,8 +171,6 @@ int yywrap()
 blockHead :
 	TOKEN_BEGIN declaration
 	{
-	        currentScope = getCurrentScope();
-		//printf("current Scope = %d\n",currentScope);
 		Node* newNode = createNode();
 		Node* tempNode = $2;
 		strcpy(newNode->code,tempNode->code);
@@ -305,8 +301,6 @@ program :
 
 unlabelledCompound :
 	TOKEN_BEGIN compoundTail{
-	        currentScope = getCurrentScope();
-		//printf("current Scope = %d\n",currentScope);
 		Node* newNode = createNode();
 		Node* tempNode = $2;
 		strcpy(newNode->code,tempNode->code);
@@ -344,7 +338,6 @@ compoundTail :
 		newNode->pt0 = $1;
 		Node* tempNode = $1;
 		strcpy(newNode->code, tempNode->code);
-		currentScope = getCurrentScope();
 		$$ = newNode;
 	}	
 	|
@@ -523,10 +516,9 @@ arraySegment :
 		newNode->pt2 = $3;
 		Node *tempNodeOne = $1;
 		Node *tempNodeTwo = $3;
-		currentScope = getCurrentScope();
-		Symbol* entry = lookUpInCurrentScope(tempNodeOne->identLex, currentScope);
+		Symbol* entry = lookUpInCurrentScope(tempNodeOne->identLex, getCurrentScope());
 		if(entry==NULL){
-		  entry = addEntry(tempNodeOne->identLex, currentScope);			
+		  entry = addEntry(tempNodeOne->identLex, getCurrentScope());			
 		}
 		int size =1;
 		entry->dim = tempNodeTwo->dim;
@@ -539,8 +531,8 @@ arraySegment :
 			newNode->upperBound[i] = tempNodeTwo->upperBound[i];
 			size = size*(tempNodeTwo->upperBound[i]-tempNodeTwo->lowerBound[i]+1);
 		}
-		entry->offset = getArrayOffset(currentScope);
-		setArrayOffset(currentScope, getArrayOffset(currentScope) - size * 4);
+		entry->offset = getArrayOffset(getCurrentScope());
+		setArrayOffset(getCurrentScope(), getArrayOffset(getCurrentScope()) - size * 4);
 		newNode->identLex = tempNodeOne->identLex;
 		
 		$$ = newNode;
@@ -554,12 +546,10 @@ arraySegment :
 		newNode->pt2 = $3;
 		Node *tempNodeOne = $1;
 		Node *tempNodeTwo = $3;
-		currentScope = getCurrentScope();
-		Symbol* entry = lookUpInCurrentScope(tempNodeOne->identLex, currentScope);
+		Symbol* entry = lookUpInCurrentScope(tempNodeOne->identLex, getCurrentScope());
 		if(entry==NULL){
-		  entry = addEntry(tempNodeOne->identLex, currentScope);			
+		  entry = addEntry(tempNodeOne->identLex, getCurrentScope());			
 		}
-		//Symbol *entry1=lookUpInCurrentScope(tempNodeTwo->identLex);
 		int size =1;
 		entry->dim = tempNodeTwo->dim;
 		newNode->dim = tempNodeTwo->dim;
@@ -572,8 +562,8 @@ arraySegment :
 			newNode->upperBound[i] = tempNodeTwo->upperBound[i];
 			size = size*(tempNodeTwo->upperBound[i]-tempNodeTwo->lowerBound[i]+1);
 		}
-		entry->offset = getArrayOffset(currentScope);
-		setArrayOffset(currentScope, getArrayOffset(currentScope) - size * 4);
+		entry->offset = getArrayOffset(getCurrentScope());
+		setArrayOffset(getCurrentScope(), getArrayOffset(getCurrentScope()) - size * 4);
 		newNode->identLex=tempNodeTwo->identLex;
 		strcat(newNode->identLex,",");		
 		strcat(newNode->identLex,tempNodeOne->identLex);
@@ -591,19 +581,18 @@ arrayList :
 				
 		Node* tempNode0=$-1;
 		Node* tempNode1=$1;
-		currentScope = getCurrentScope();
 		//printf("\n\n%s recieved\n\n",tempNode1->identLex);
 		//printf("arrayList->arraySegment\n");
 		char* pch;
 		pch = strtok (tempNode1->identLex,",");
   		while (pch != NULL)
   		{
-		  Symbol* symbolEntry=lookUpInCurrentScope(pch, currentScope);
+		  Symbol* symbolEntry=lookUpInCurrentScope(pch, getCurrentScope());
 			if (symbolEntry!=NULL){
 				symbolEntry->type=tempNode0->semTypeDef;//return 0;
 			}
 			else{
-			  symbolEntry = addEntry(pch, currentScope);
+			  symbolEntry = addEntry(pch, getCurrentScope());
 				symbolEntry->type=tempNode0->semTypeDef;
 				symbolEntry->dim=tempNode1->dim;
 			}
@@ -618,13 +607,12 @@ arrayList :
 	{
 		Node* tempNode0=$1;
 		Node* tempNode1=$3;
-		currentScope = getCurrentScope();
-		Symbol* symbolEntry=lookUpInCurrentScope(tempNode1->identLex, currentScope);
+		Symbol* symbolEntry=lookUpInCurrentScope(tempNode1->identLex, getCurrentScope());
 		if (symbolEntry!=NULL){
 			symbolEntry->type=tempNode0->semTypeDef;//return 0;
 		}
 		else{
-		  symbolEntry = addEntry(tempNode1->identLex, currentScope);
+		  symbolEntry = addEntry(tempNode1->identLex, getCurrentScope());
 			symbolEntry->type=tempNode0->semTypeDef;
 			symbolEntry->dim=tempNode1->dim;
 		}
@@ -748,8 +736,7 @@ simpleArithmeticExpression :
 		newNode->intValue = 0-tempNode->intValue;
 		newNode->realValue = 0.0-tempNode->realValue;
 		newNode->semTypeDef=tempNode->semTypeDef ;
-		newNode->place=getNewTemp(currentScope);
-		//strcpy(newNode->code,tempNode->code);
+		newNode->place=getNewTemp();
 		if(tempNode->semTypeDef == storeReal){
 			sprintf(newNode->code,"%s\nli.s\t$f0,0.0\nl.s\t$f1,%d($sp)\nsub\t$f2,$f0,$f1\ns.s\t$f2,%d($sp)\n",tempNode->code,tempNode->place,newNode->place);
 		}
@@ -796,7 +783,6 @@ simpleArithmeticExpression :
 		else {  			
 			newNode->semTypeDef = storeInteger ;  
 			newNode->intValue = tempNode0->intValue  +  tempNode2->intValue ;
-			//newNode->place=getNewTemp(); 
 			sprintf(newNode->code,"%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nadd\t$t2,$t0,$t1\nsw\t$t2,%d($sp)\n",newNode->code,tempNode0->place,tempNode2->place,tempNode0->place);
 			newNode->place=tempNode0->place;
 		}
@@ -834,7 +820,6 @@ simpleArithmeticExpression :
 		else {  
 			newNode->semTypeDef = storeInteger ;  
 			newNode->intValue = tempNode0->intValue - tempNode2->intValue ; 
-			//newNode->place=getNewTemp(); 
 			sprintf(newNode->code,"%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nsub\t$t2,$t0,$t1\nsw\t$t2,%d($sp)\n",newNode->code,tempNode0->place,tempNode2->place,tempNode0->place);
 			newNode->place=tempNode0->place;
 		}
@@ -888,7 +873,6 @@ term :
 			else {  
 				newNode->semTypeDef = storeInteger ;  
 				newNode->intValue = tempNode0->intValue*tempNode2->intValue ;
-				//newNode->place=getNewTemp;
 				sprintf(newNode->code,"%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nmult\t$t0,$t1\nmflo\t$t0\nsw\t$t0,%d($sp)\n",newNode->code,tempNode0->place,tempNode2->place,tempNode0->place);
 			}
 			newNode->place=tempNode0->place;
@@ -932,7 +916,6 @@ term :
 				}
 				else {
 					newNode->intValue = tempNode0->intValue/tempNode2->intValue;
-					//newNode->place=getNewTemp();
 					sprintf(newNode->code,"%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\ndiv\t$t0,$t1\nmflo\t$t1\nsw\t$t1,%d($sp)\n",newNode->code, tempNode0->place, tempNode2->place, tempNode0->place);
 					newNode->place=tempNode0->place;
 				}
@@ -1025,14 +1008,13 @@ primary :
 		Node *tempNode = (Node*)$1;
 		////printf("primary->variable, int value=%d\n",newNode->intValue);
 // do type checking and proper lookup
-		currentScope = getCurrentScope();
-		Symbol* foundEntry = lookUp(tempNode->identLex,currentScope);
+		Symbol* foundEntry = lookUp(tempNode->identLex,getCurrentScope());
 		if (foundEntry)
 		{	
 			newNode->intValue =  foundEntry->value;
 			newNode->realValue = foundEntry->realValue;		
 			newNode->semTypeDef= foundEntry->type ;
-			newNode->place=getNewTemp(currentScope);
+			newNode->place=getNewTemp();
 			int offset;
 			if (tempNode->isArray == 1){
 				offset = tempNode->place;
@@ -1079,7 +1061,7 @@ unsignedNumber :
 		newNode->intValue = tempNode->intValue;
 		newNode->realValue = tempNode->realValue;
 		newNode->semTypeDef=storeReal;
-		newNode->place=getNewTemp(currentScope);
+		newNode->place=getNewTemp();
 		sprintf(newNode->code,"li.s\t$f0,%f\ns.s\t$f0,%d($sp)\n",newNode->realValue,newNode->place);
 		$$ = newNode;
 		//printf("unsignedNumber->real, realval = %f\n",newNode->realValue);	
@@ -1094,7 +1076,7 @@ unsignedNumber :
 		newNode->intValue = tempNode->intValue;
 		newNode->realValue = tempNode->realValue;
 		newNode->semTypeDef=storeInteger;
-		newNode->place=getNewTemp(currentScope);
+		newNode->place=getNewTemp();
 		sprintf(newNode->code,"li\t$t0,%d\nsw\t$t0,%d($sp)\n",newNode->intValue,newNode->place);
 		$$ = newNode;
 		//printf("unsignedNumber->integer, intval = %d\n",newNode->intValue);
@@ -1184,10 +1166,8 @@ subscriptedVariable :
 		newNode->pt2 = $3;
 		Node* tempNode0 = $1;
 		Node* tempNode1 = $3;
-		//newNode->place = getNewTemp();
 		strcpy(newNode->identLex, tempNode0->identLex);
-		currentScope = getCurrentScope();
-		Symbol* foundEntry = lookUp(tempNode0->identLex,currentScope);
+		Symbol* foundEntry = lookUp(tempNode0->identLex,getCurrentScope());
 		if(foundEntry==NULL)
 		{
 			newNode->semTypeDef = storeError;
@@ -1284,16 +1264,8 @@ identifier :
 	{
 		Node* newNode = createNode();
 		newNode->type = identifier;
-		//printf("yytext: %s\n",yytext);
 		strcpy(newNode->identLex,yytext);
-		currentScope = getCurrentScope();
-		//Symbol* symbol = lookUp(newNode->identLex, currentScope);
-		//if(symbol==NULL){
-		//	//printf("entry not declared \n");
-		//}
-		//newNode->semTypeDef = symbol->type;
 		sprintf(newNode->code,"");
-		//printf("TOKEN_IDENTIFIER\n");		
 		$$ = newNode;
 	};
 
@@ -1484,7 +1456,7 @@ booleanSecondary :
 		newNode->type = booleanSecondary;
 		newNode->pt1 = $2;
 		Node* tempNode = $2;
-		newNode->place = getNewTemp(currentScope);
+		newNode->place = getNewTemp();
 		sprintf(newNode->code,"%sli\t$t0,1\nlw\t$t1,%d($sp)\nsub\t$t2,$t0,$t1\nsw\t$t2,%d($sp)\n",tempNode->code,tempNode->place,newNode->place);
 		if (tempNode->semTypeDef==storeBoolean) {  
 			newNode->semTypeDef=storeBoolean ;  
@@ -1516,8 +1488,7 @@ booleanPrimary :
 		newNode->type = variable;
 		newNode->pt0 = $1;
 		Node *tempNode=$1;
-		currentScope = getCurrentScope();
-		Symbol* entry = lookUp(tempNode->identLex,currentScope);
+		Symbol* entry = lookUp(tempNode->identLex,getCurrentScope());
 		tempNode->semTypeDef = entry->type;
 		newNode->semTypeDef = tempNode->semTypeDef;
 		$$=newNode;
@@ -1552,7 +1523,7 @@ logicalValue:
 	{
 		Node* newNode = createNode();
 		newNode->type = logicalValue;
-		newNode->type = getNewTemp(currentScope);
+		newNode->type = getNewTemp();
 		if (strcmp("true",yytext)==0){
 			newNode->boolValue = true;
 			sprintf(newNode->code,"li\t$t0,1\nsw\t$t0,%d($sp)\n",newNode->place);
@@ -1575,7 +1546,7 @@ relation :
 		Node* tempNode0 = $1;
 		Node* tempNode1 = $2;
 		Node* tempNode2 = $3;
-		newNode->place = getNewTemp(currentScope);
+		newNode->place = getNewTemp();
 		int label1 = getNewLabel();
 		int label2 = getNewLabel();
 		if(strcmp(tempNode1->identLex,">") == 0) 
@@ -1696,22 +1667,21 @@ listType :
 
 		Node *temp1=$1;
 		//printf("belu listType\n");
-		currentScope = getCurrentScope();
-		if (lookUpInCurrentScope(temp1->identLex, currentScope)!=NULL){
+		if (lookUpInCurrentScope(temp1->identLex, getCurrentScope())!=NULL){
 			//printf("belu if\n");
 			return 0;
 		}
 		else{
 			//printf("belu else\n");			
-		  Symbol *newEntry=addEntry(temp1->identLex, currentScope);
+		  Symbol *newEntry=addEntry(temp1->identLex, getCurrentScope());
 			newEntry->type=temp2->semTypeDef;
-			if(currentGlobalOffset <= getCurrentOffset(currentScope)){
-				newEntry->offset=currentGlobalOffset;//symbolTable[currentScope].currentOffset;
-				currentGlobalOffset-=4;//symbolTable[currentScope].currentOffset-=4;
+			if(currentGlobalOffset <= getCurrentOffset(getCurrentScope())){
+				newEntry->offset=currentGlobalOffset;
+				currentGlobalOffset-=4;
 			}
 			else{
-				newEntry->offset=getCurrentOffset(currentScope);
-				setCurrentOffset(currentScope, getCurrentOffset(currentScope) - 4);				
+				newEntry->offset=getCurrentOffset(getCurrentScope());
+				setCurrentOffset(getCurrentScope(), getCurrentOffset(getCurrentScope()) - 4);				
 			}
 			//printf("belu semtypedef : %d\n", newEntry->type);	
 			$$=$0;
@@ -1723,19 +1693,18 @@ listType :
 		Node *temp2=$0;
 		Node *temp0=$1;
 		Node *temp1=$3;
-		currentScope = getCurrentScope();
-		if (lookUpInCurrentScope(temp1->identLex, currentScope)!=NULL){
+		if (lookUpInCurrentScope(temp1->identLex, getCurrentScope())!=NULL){
 		}
 		else{
-		  Symbol *newEntry=addEntry(temp1->identLex, currentScope);
+		  Symbol *newEntry=addEntry(temp1->identLex, getCurrentScope());
 			newEntry->type=temp2->semTypeDef;
-			if(currentGlobalOffset <= getCurrentOffset(currentScope)){
-				newEntry->offset=currentGlobalOffset;//symbolTable[currentScope].currentOffset;
-				currentGlobalOffset-=4;//symbolTable[currentScope].currentOffset-=4;
+			if(currentGlobalOffset <= getCurrentOffset(getCurrentScope())){
+				newEntry->offset=currentGlobalOffset;
+				currentGlobalOffset-=4;
 			}
 			else{
-				newEntry->offset=getCurrentOffset(currentScope);
-				setCurrentOffset(currentScope, getCurrentOffset(currentScope) - 4);				
+				newEntry->offset=getCurrentOffset(getCurrentScope());
+				setCurrentOffset(getCurrentScope(), getCurrentOffset(getCurrentScope()) - 4);				
 			}
 		}
 		$$=$0;	
@@ -2059,10 +2028,7 @@ assignmentStatement :
 		Node *tmp1=$1;
 		Node *tmp2=$3;
 		new->semTypeDef=storeVoid;
-		currentScope = getCurrentScope();	
-  		symbol1=lookUp(tmp1->identLex, currentScope);
-		//printf("################### scope parent = %d,current scope=%d and sybol lexeme =  #####################\n",symbolTable[currentScope].parent,currentScope);
-		//printf("################### symbol lexeme = %s #####################\n",symbol1->lexeme);	
+  		symbol1=lookUp(tmp1->identLex, getCurrentScope());
 		if (symbol1==NULL){
 			new->semTypeDef=storeError;
 		}
@@ -2082,7 +2048,6 @@ assignmentStatement :
 			else if (symbol1->type==storeReal && tmp2->semTypeDef==storeReal){								
 				// SYMBOL1>TYPE IS Real
 		  		symbol1->realValue=tmp2->realValue;
-				////printf("assignmentStatement->identifier:= arithmeticexpression, realValue= %f,,%f\n",tmp2->realValue,symbol1->realValue);
 				int offset;
 				if(tmp1->isArray==1){
 					offset = tmp1->place;
@@ -2123,8 +2088,7 @@ assignmentStatement :
 	
 		Node *temp1=$1;
 		Node *temp2=$3;
-		currentScope = getCurrentScope();
-		Symbol *symbol2=lookUp(temp1->identLex,currentScope);
+		Symbol *symbol2=lookUp(temp1->identLex,getCurrentScope());
 		new->semTypeDef=storeVoid ;  
 		
 
@@ -2158,8 +2122,7 @@ forStatement :
 		Node *temp3 = $6;
 		Node *temp4 = $8;
 		Node *temp5 = $10;
-		currentScope = getCurrentScope();
-		Symbol *symbol=lookUp(temp->identLex,currentScope);
+		Symbol *symbol=lookUp(temp->identLex,getCurrentScope());
 		if (symbol == NULL) {  
 			temp->semTypeDef=storeError;
 		
@@ -2203,8 +2166,7 @@ procedureStatement :
 		Node *new = createNode();
 		Node *temp1 = $1;
 		Node *temp2 = $2;
-		currentScope = getCurrentScope();
-		Symbol *symbol= lookUp(temp1->identLex,currentScope);
+		Symbol *symbol= lookUp(temp1->identLex,getCurrentScope());
 
 		if(symbol == NULL)
 		{
@@ -2219,7 +2181,7 @@ procedureStatement :
 			else
 			{*/
 				new->semTypeDef = symbol->type;
-				new->place = getNewTemp(currentScope);
+				new->place = getNewTemp();
 				sprintf(new->code, "sw\t$t0,-996($sp)\nsw\t$t1,-992($sp)\nsw\t$t2,-988($sp)\nsw\t$t3,-984($sp)\nsw\t$t4,-980($sp)\nsw\t$t5,-976($sp)\nsw\t$t6,-972($sp)\nsw\t$t7,-968($sp)\nsw\t$ra,-964($sp)\n%sli\t$t0,100\nsub\t$sp,$sp,$t0\njal\t%s\nli\t$t0,100\nadd\t$sp,$sp,$t0\nlw\t$t0,-996($sp)\nlw\t$t1,-992($sp)\nlw\t$t2,-988($sp)\nlw\t$t3,-984($sp)\nlw\t$t4,-980($sp)\nlw\t$t5,-976($sp)\nlw\t$t6,-972($sp)\nlw\t$t7,-968($sp)\nlw\t$ra,-964($sp)\nsw\t$v0,%d($sp)\n",temp2->code,temp1->identLex,new->place);
 
 			//}
@@ -2260,8 +2222,7 @@ actualParameterList :
 	{
 		Node *temp = $-1;
 		Node *temp1 = $1;
-		currentScope = getCurrentScope();
-		Symbol* symbol= lookUp(temp1->identLex,currentScope);
+		Symbol* symbol= lookUp(temp1->identLex,getCurrentScope());
 		Node *new = createNode();
 		new->dim = 0;
 		sprintf(new->code,"%slw\t$t0,%d($sp)\nsw\t$t0,%d($sp)\n",temp1->code,temp1->place,-100-4* new->dim);
@@ -2276,8 +2237,7 @@ actualParameterList :
 		Node *temp = $-1;
 		Node *temp3 = $1;
 		Node *temp1 = $3;
-		currentScope = getCurrentScope();
-		Symbol* symbol= lookUp(temp->identLex,currentScope);
+		Symbol* symbol= lookUp(temp->identLex,getCurrentScope());
 		
 		Node *new = createNode();
 		new->dim = 1 + temp3->dim;
@@ -2317,8 +2277,7 @@ functionDesignator :
 		Node *new = createNode();
 		Node *temp1 = $1;
 		Node *temp2 = $2;
-		currentScope = getCurrentScope();
-		Symbol *symbol= lookUp(temp1->identLex,currentScope);
+		Symbol *symbol= lookUp(temp1->identLex,getCurrentScope());
 
 		if(symbol == NULL)
 		{
@@ -2333,7 +2292,7 @@ functionDesignator :
 			else
 			{*/
 				new->semTypeDef = symbol->type;
-				new->place = getNewTemp(currentScope);
+				new->place = getNewTemp();
 				sprintf(new->code, "sw\t$t0,-996($sp)\nsw\t$t1,-992($sp)\nsw\t$t2,-988($sp)\nsw\t$t3,-984($sp)\nsw\t$t4,-980($sp)\nsw\t$t5,-976($sp)\nsw\t$t6,-972($sp)\nsw\t$t7,-968($sp)\nsw\t$ra,-964($sp)\n%sli\t$t0,100\nsub\t$sp,$sp,$t0\njal\t%s\nli\t$t0,100\nadd\t$sp,$sp,$t0\nlw\t$t0,-996($sp)\nlw\t$t1,-992($sp)\nlw\t$t2,-988($sp)\nlw\t$t3,-984($sp)\nlw\t$t4,-980($sp)\nlw\t$t5,-976($sp)\nlw\t$t6,-972($sp)\nlw\t$t7,-968($sp)\nlw\t$ra,-964($sp)\nsw\t$v0,%d($sp)\n",temp2->code,temp1->identLex,new->place);
 
 			//}
@@ -2402,22 +2361,19 @@ formalParameter :
 		$0=$-1;
 		Node *node0 = $0;
 		Node *node1 = $1;
-		
-		int oldScope = currentScope;
-		currentScope = getGlobalLevel() + 1;
 
-		if (lookUpInCurrentScope(node1->identLex, currentScope) == NULL){
-		  Symbol * entry = addEntry(node1->identLex, currentScope);
-			entry->offset = getCurrentOffset(currentScope);
-			setCurrentOffset(currentScope, getCurrentOffset(currentScope) - 4);
+		int globalLevelPlusOne = getGlobalLevel() + 1;
+		if (lookUpInCurrentScope(node1->identLex, globalLevelPlusOne) == NULL){
+		  Symbol * entry = addEntry(node1->identLex, globalLevelPlusOne);
+			entry->offset = getCurrentOffset(globalLevelPlusOne);
+			setCurrentOffset(globalLevelPlusOne, getCurrentOffset(globalLevelPlusOne) - 4);
 		}
 		else{
 			printf("warning: paramaters,%s already defined\n",node1->identLex);
 		}
 
-		currentScope = oldScope;
-		if (lookUpInCurrentScope(node0->identLex, currentScope) == NULL){
-		  Symbol * entry = addEntry(node1->identLex, currentScope);
+		if (lookUpInCurrentScope(node0->identLex, getCurrentScope()) == NULL){
+		  Symbol * entry = addEntry(node1->identLex, getCurrentScope());
 			entry->procNumParam++;
 		}
 		////printf("formalParmeter->identifer\n");
@@ -2448,10 +2404,7 @@ identifierList :
 	identifier {
 		Node *node1 = $0;
 		Node *node2 = $1;
-		int oldLevel = currentScope;
-		currentScope = getGlobalLevel() + 1;
-		//printf("identlist->ident\n");
-		Symbol *symbol1=lookUp(node2->identLex,currentScope);
+		Symbol *symbol1=lookUp(node2->identLex,getGlobalLevel() + 1);
 		if(symbol1 != NULL)
 		{
 			symbol1->type=node1->semTypeDef;		
@@ -2460,7 +2413,6 @@ identifierList :
 			printf("error: %s is absent from formal paramater",node2->identLex);
 			//symbol1->type = node1->semTypeDef;
 		}
-		currentScope = oldLevel;
 		paramBelu--;
 		$$ = node1;
 		
@@ -2469,10 +2421,7 @@ identifierList :
 	| identifierList TOKEN_COMMA identifier{
 		Node *node1 = $1;
 		Node *node2 = $3;
-		int oldLevel = currentScope;
-		currentScope = getGlobalLevel() + 1;
-		//printf("identlist->ident\n");
-		Symbol *symbol1=lookUp(node2->identLex,currentScope);
+		Symbol *symbol1=lookUp(node2->identLex,getGlobalLevel() + 1);
 		if(symbol1 != NULL)
 		{
 			symbol1->type=node1->semTypeDef;		
@@ -2481,7 +2430,6 @@ identifierList :
 			printf("error: %s is absent from formal paramater",node2->identLex);
 			//symbol1->type = node1->semTypeDef;
 		}
-		currentScope = oldLevel;
 		//printf("identlist ->identlist , ident\n");
 		paramBelu--;
 		$$ = node1;
@@ -2523,9 +2471,8 @@ procedureHeading :
 		Node *node1 = $1;
 		node1->parent = node;
 		strcpy(node->identLex, node1->identLex);
-		currentScope = getCurrentScope();
-		if (lookUpInCurrentScope(node1->identLex, currentScope) == NULL){
-		  Symbol * entry = addEntry(node1->identLex, currentScope);
+		if (lookUpInCurrentScope(node1->identLex, getCurrentScope()) == NULL){
+		  Symbol * entry = addEntry(node1->identLex, getCurrentScope());
 			entry->procNumParam = 0;
 		}
 		$$ = node;
@@ -2553,8 +2500,7 @@ procedureDeclaration :
 	TOKEN_PROCEDURE procedureHeading procedureBody {
 		Node *node1 = $2;
 		Node *node2 = $3;
-		currentScope = getCurrentScope();
-		Symbol* symbol = lookUp(node1->identLex, currentScope);////check////
+		Symbol* symbol = lookUp(node1->identLex, getCurrentScope());////check////
 		symbol->type = storeVoid;
 
 		Node *node = createNode();
@@ -2579,8 +2525,7 @@ procedureDeclaration :
 		Node *node1 = $3;
 		Node *node2 = $4;
 		Node *node3 = $1;
-		currentScope = getCurrentScope();
-		Symbol* symbol = lookUpInCurrentScope(node1->identLex, currentScope);
+		Symbol* symbol = lookUpInCurrentScope(node1->identLex, getCurrentScope());
 		symbol->type = node3->semTypeDef;
 
 		Node *node = createNode();
@@ -2658,7 +2603,6 @@ switchDesignator :
 %%
 int main(int argc, char* argv[])
 {
-	tempNodeScope = currentScope;
    	int i = 0;
 	for(i=0;i<1000;i++){
 		setCurrentOffset(i, 0);

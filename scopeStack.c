@@ -5,7 +5,8 @@ int scopeStack[100];
 int scopeStackTop = 0;
 int globalLevel = 0;
 
-void push(int currentScope) {
+void push() {
+  int currentScope = getCurrentScope();
 	if (scopeStackTop<100) {
 		scopeStack[scopeStackTop] = globalLevel;
 		scopeStackTop++;

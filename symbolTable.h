@@ -35,7 +35,7 @@ Symbol* addEntry(char *lexm, int scope);
 
 void symbolTableDisplay(int scope);
 
-int getNewTemp(int scope);
+int getNewTemp();
 int getArrayOffset(int idx);
 void setArrayOffset(int idx, int offset);
 int getCurrentOffset(int idx);
@@ -43,5 +43,12 @@ void setCurrentOffset(int idx, int offset);
 int getNewTempOffset(int idx);
 void setNewTempOffset(int idx, int offset);
 void setParent(int idx, int scope);
+
+void push();
+int pop();
+int getCurrentScope();
+int getGlobalLevel();
+void increaseGlobalLevel();
+void printSymbolTable();
 
 #endif /* SYMBOLTABLE_H */

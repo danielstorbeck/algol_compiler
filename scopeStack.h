@@ -3,7 +3,7 @@
 
 #include "symbolTable.h"
 
-void push(int);
+void push();
 int pop();
 int getCurrentScope();
 int getGlobalLevel();

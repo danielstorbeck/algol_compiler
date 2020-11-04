@@ -3,6 +3,9 @@
 #include "tree.h"
 
 SymbolTable symbolTable[1000];
+int scopeStack[100];
+int scopeStackTop = 0;
+int globalLevel = 0;
 
 Symbol* lookUp(char *lexm,int scope){
   Symbol *symbolEntry = symbolTable[scope].head;
@@ -90,9 +93,10 @@ void symbolTableDisplay(int scope){
   }
 }
 
-int getNewTemp(int scope){
-  symbolTable[scope].newTempOffset-=4;
-  return symbolTable[scope].newTempOffset+4;
+int getNewTemp(){
+  int currentScope = getCurrentScope();
+  symbolTable[currentScope].newTempOffset-=4;
+  return symbolTable[currentScope].newTempOffset+4;
 }
 
 int getArrayOffset(int idx) {
@@ -122,3 +126,44 @@ void setNewTempOffset(int idx, int offset) {
 void setParent(int idx, int scope) {
   symbolTable[idx].parent = scope;
 }
+
+void push() {
+  int currentScope = getCurrentScope();
+	if (scopeStackTop<100) {
+		scopeStack[scopeStackTop] = globalLevel;
+		scopeStackTop++;
+	        setParent(globalLevel, currentScope);
+	}
+	else {
+		printf("error: Scope stack overflow\n");
+	}
+}
+
+int pop() {
+	if (scopeStackTop) {
+		scopeStackTop--;
+		return scopeStack[scopeStackTop];
+	}
+	else {
+		return -1;
+	}
+}
+
+int getCurrentScope() {
+  return scopeStack[scopeStackTop - 1];
+}
+
+int getGlobalLevel() {
+  return globalLevel;
+}
+
+void increaseGlobalLevel() {
+  globalLevel++;
+}
+
+void printSymbolTable() {
+  int i;
+  for(i=0; i <= globalLevel; i++){
+    symbolTableDisplay(i);
+  }
+}  

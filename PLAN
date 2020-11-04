@@ -19,7 +19,7 @@ DONE
 ====
 
 * fix tests that compare compiled files with originals
-* tree, symbolTable, and scopeStack extracted as abstract data type components
+* tree and symbolTable extracted as abstract data type components
 * switch to x86_64 executable
 * fix warnings. all warnings were switched off
 * move development to x86_64 platform but still make the x86 executable

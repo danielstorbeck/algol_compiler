@@ -6,9 +6,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "y.tab.h"
-#include "scopeStack.h"
-
-extern int currentScope;
+#include "symbolTable.h"
 
 int lineNo = 1;
 
@@ -59,7 +57,7 @@ COMMENT[^.;]*;		{char *tempString = (char *)yytext;
 			
 "begin"			{
 			 increaseGlobalLevel();
-			 push(currentScope);
+			 push();
 			 return TOKEN_BEGIN ;
 			}
 			
