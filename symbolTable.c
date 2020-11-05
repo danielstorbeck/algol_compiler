@@ -6,6 +6,21 @@ SymbolTable symbolTable[1000];
 int scopeStack[100];
 int scopeStackTop = 0;
 int globalLevel = 0;
+int currentLabel = 0;
+
+void initializeSymbolTable() {
+   	int i = 0;
+	for(i=0;i<1000;i++){
+		setCurrentOffset(i, 0);
+		setNewTempOffset(i, -1000);
+		setArrayOffset(i, -700);
+	}
+}
+
+int getNewLabel() {
+	currentLabel++;
+	return currentLabel;
+}
 
 Symbol* lookUp(char *lexm,int scope){
   Symbol *symbolEntry = symbolTable[scope].head;
@@ -99,8 +114,8 @@ int getNewTemp(){
   return symbolTable[currentScope].newTempOffset+4;
 }
 
-int getArrayOffset(int idx) {
-  return symbolTable[idx].arrayOffset;
+int getArrayOffset() {
+  return symbolTable[getCurrentScope()].arrayOffset;
 }
 
 void setArrayOffset(int idx, int offset) {
@@ -127,7 +142,7 @@ void setParent(int idx, int scope) {
   symbolTable[idx].parent = scope;
 }
 
-void push() {
+void pushScope() {
   int currentScope = getCurrentScope();
 	if (scopeStackTop<100) {
 		scopeStack[scopeStackTop] = globalLevel;
@@ -139,7 +154,7 @@ void push() {
 	}
 }
 
-int pop() {
+int popScope() {
 	if (scopeStackTop) {
 		scopeStackTop--;
 		return scopeStack[scopeStackTop];

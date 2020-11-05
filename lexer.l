@@ -43,31 +43,32 @@ real_number		{unsigned_number}
 white			" "|"\t"
 newline			"\n"
 library			"sin"|"cos"|"tan"|"abs"|"sign"|"sqrt"|"ln"|"exp"|"arctan"|"arcsin"|"arccos"
+
 %%
+
 {newline}		{lineNo++;}
 			
-COMMENT[^.;]*;		{char *tempString = (char *)yytext;
+COMMENT[^.;]*;		{
+			 char *tempString = (char *)yytext;
 			 int i = 0;
-			 while(tempString != NULL){
+			 while(tempString != NULL) {
 				if (tempString[0]=='\n') {lineNo++;}
 				tempString++;
 			 }
 			}
-
 			
 "begin"			{
 			 increaseGlobalLevel();
-			 push();
+			 pushScope();
 			 return TOKEN_BEGIN ;
 			}
 			
-"end"		{
-			 pop();
-			 return TOKEN_END;}
-
+"end"			{
+			 popScope();
+			 return TOKEN_END;
+			}
 
 {white}*		{}
-			
 
 {logical_value}		{return TOKEN_LOGICAL_VALUE;}
 
@@ -128,13 +129,12 @@ COMMENT[^.;]*;		{char *tempString = (char *)yytext;
 "switch"		{return TOKEN_SWITCH;}
 "procedure"		{return TOKEN_PROCEDURE;}
 "print"			{return TOKEN_PRINT;}
-"label"			{ return TOKEN_TYPE_LABEL;}
+"label"			{return TOKEN_TYPE_LABEL;}
 "value"			{return TOKEN_VALUE;}
 
 {specificator}		{return TOKEN_SPECIFIER;}
 
 {library}		{return TOKEN_LIBRARY;}
-
 
 {identifier}		{return TOKEN_IDENTIFIER;}
 
@@ -142,6 +142,4 @@ COMMENT[^.;]*;		{char *tempString = (char *)yytext;
 
 {real_number}		{return TOKEN_REAL_NUM;}
 
-
 %%
-

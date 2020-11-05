@@ -29,6 +29,8 @@ typedef struct SymbolTable {
 	int newTempOffset;
 } SymbolTable;
 
+void initializeSymbolTable();
+int getNewLabel();
 Symbol* lookUp(char *lexm,int scope);
 Symbol* lookUpInCurrentScope(char *lexm, int scope);
 Symbol* addEntry(char *lexm, int scope);
@@ -36,7 +38,7 @@ Symbol* addEntry(char *lexm, int scope);
 void symbolTableDisplay(int scope);
 
 int getNewTemp();
-int getArrayOffset(int idx);
+int getArrayOffset();
 void setArrayOffset(int idx, int offset);
 int getCurrentOffset(int idx);
 void setCurrentOffset(int idx, int offset);
@@ -44,8 +46,8 @@ int getNewTempOffset(int idx);
 void setNewTempOffset(int idx, int offset);
 void setParent(int idx, int scope);
 
-void push();
-int pop();
+void pushScope();
+int popScope();
 int getCurrentScope();
 int getGlobalLevel();
 void increaseGlobalLevel();
