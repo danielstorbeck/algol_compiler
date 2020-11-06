@@ -2,8 +2,11 @@ LEX = lex
 YACC = yacc
 CC = gcc
 
-algol: y.tab.o lex.yy.o symbolTable.o tree.o
-	$(CC) y.tab.o lex.yy.o symbolTable.o tree.o
+algol: driver.o y.tab.o lex.yy.o symbolTable.o tree.o
+	$(CC) driver.o y.tab.o lex.yy.o symbolTable.o tree.o
+
+driver.o: driver.c y.tab.h y.tab.c
+	$(CC) -c driver.c
 
 symbolTable.o: symbolTable.c symbolTable.h tree.h
 	$(CC) -c symbolTable.c symbolTable.h

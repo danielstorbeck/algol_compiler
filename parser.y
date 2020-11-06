@@ -11,10 +11,7 @@
 
 #define YYSTYPE Node *
 
-extern Node* yylval;
 extern char* yytext;
-extern int lineNo ; 
-extern FILE *yyin;
 extern int yylex();
 
 int currentGlobalOffset=0;
@@ -2495,27 +2492,3 @@ switchDesignator :
 	switchIdentifier TOKEN_OPEN_CURLY_BRACKET subscriptExpression TOKEN_CLOSE_CURLY_BRACKET ;
 
 %%
-	
-int main(int argc, char* argv[]) {
-  int i;
-  initializeSymbolTable();
-	for(i=1;i<argc;i++)
-	{
-	    FILE* fp;
-	    fp = fopen(argv[i], "r");
-	    yyin = fp;
-	    while(yyparse() != 0)
-		;
-	}
-	//printf("%s",code);
-	//check while merging the codes
-	char code1[99999];
-	strcpy(code1,"b\tmain\n");
-	strcat(code1,code);
-	strcat(code1,"jr\t$ra");
-	strcat(code1,"\n\n\t.data\nMSG:\t.asciiz \"\\n OUTPUT = \"");
-	FILE* fp1 = fopen("code1.asm","w");
-	fprintf(fp1,"%s",code1);
-	return 0;
-}
-
