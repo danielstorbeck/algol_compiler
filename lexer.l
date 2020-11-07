@@ -10,6 +10,10 @@
 
 int lineNo = 1;
 
+void errorMessage() {
+        fprintf(stderr,"scanner error: invalid input character ->%s<-\n", yytext);
+}
+
 %}
 
 letter			[a-zA-Z]
@@ -141,5 +145,9 @@ COMMENT[^.;]*;		{
 {integer}		{return TOKEN_INTEGER;}
 
 {real_number}		{return TOKEN_REAL_NUM;}
+
+.			{errorMessage();
+			 exit(0);
+			}
 
 %%
