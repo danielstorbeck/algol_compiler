@@ -1,5 +1,5 @@
-LEX = lex
-YACC = yacc
+LEX = flex
+YACC = bison
 CC = gcc
 
 algol: driver.o y.tab.o lex.yy.o symbolTable.o tree.o
@@ -18,7 +18,7 @@ y.tab.o: y.tab.c y.tab.h
 	$(CC) -c y.tab.c
 
 y.tab.c y.tab.h: parser.y  symbolTable.h tree.h
-	$(YACC) -v -d parser.y
+	$(YACC) -v --output=y.tab.c --defines=y.tab.h parser.y
 
 lex.yy.o: y.tab.h lex.yy.c
 	$(CC) -c lex.yy.c
