@@ -11,7 +11,7 @@
 int lineNo = 1;
 
 void errorMessage() {
-        fprintf(stderr,"scanner error: invalid input character ->%s<-\n", yytext);
+        fprintf(stderr,"scanning error: invalid input character ->%s<-\n", yytext);
 }
 
 %}
@@ -147,7 +147,9 @@ COMMENT[^.;]*;		{
 {real_number}		{return TOKEN_REAL_NUM;}
 
 .			{errorMessage();
-			 exit(0);
+			 return 0;
 			}
+
+<<EOF>>			{return 0;}
 
 %%

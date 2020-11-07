@@ -18,7 +18,7 @@ int currentGlobalOffset=0;
 char code[99999];
 
 void yyerror(const char *str) {
-        fprintf(stderr,"error: encountered on this token->%s<-\n", yytext);
+        fprintf(stderr,"parsing error on this token ->%s<-\n", yytext);
 }
 
 int yywrap() {
@@ -27,9 +27,8 @@ int yywrap() {
  
 %}
 
-// does not work in yacc mode:
 // %define api.value.type {Node *}
-// %define parse.trace
+%define parse.trace
 
 ////////////TOKEN DEFINITIONS/////////////
 

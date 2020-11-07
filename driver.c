@@ -8,12 +8,14 @@ extern FILE *yyin;
 
 int main(int argc, char* argv[]) {
   int i;
+  // %define parse.trace in the parser definition allows for tracing
+  // if yydebug is set to 1
+  // yydebug=1;
   initializeSymbolTable();
 	for(i=1;i<argc;i++)
 	{
 	  yyin = fopen(argv[i], "r");
-	  while(yyparse() != 0)
-		;
+	  yyparse();
 	}
 	//printf("%s",code);
 	//check while merging the codes
