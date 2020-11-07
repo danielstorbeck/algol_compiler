@@ -18,14 +18,18 @@ int currentGlobalOffset=0;
 char code[99999];
 
 void yyerror(const char *str) {
-        fprintf(stderr,"error: encountered on this token->%s\n",yytext);
+        fprintf(stderr,"error: encountered on this token->%s<-\n", yytext);
 }
 
 int yywrap() {
         return 1;
 }
  
-%} 
+%}
+
+// does not work in yacc mode:
+// %define api.value.type {Node *}
+// %define parse.trace
 
 ////////////TOKEN DEFINITIONS/////////////
 
@@ -689,7 +693,7 @@ simpleArithmeticExpression :
 		newNode->intValue = 0-tempNode->intValue;
 		newNode->realValue = 0.0-tempNode->realValue;
 		newNode->semTypeDef=tempNode->semTypeDef ;
-		newNode->place=getNewTemp();
+		newNode->place=getNewTempOffset();
 		if(tempNode->semTypeDef == storeReal){
 			sprintf(newNode->code,"%s\nli.s\t$f0,0.0\nl.s\t$f1,%d($sp)\nsub\t$f2,$f0,$f1\ns.s\t$f2,%d($sp)\n",tempNode->code,tempNode->place,newNode->place);
 		}
@@ -959,7 +963,7 @@ primary :
 			newNode->intValue =  foundEntry->value;
 			newNode->realValue = foundEntry->realValue;		
 			newNode->semTypeDef= foundEntry->type ;
-			newNode->place=getNewTemp();
+			newNode->place=getNewTempOffset();
 			int offset;
 			if (tempNode->isArray == 1){
 				offset = tempNode->place;
@@ -1006,7 +1010,7 @@ unsignedNumber :
 		newNode->intValue = tempNode->intValue;
 		newNode->realValue = tempNode->realValue;
 		newNode->semTypeDef=storeReal;
-		newNode->place=getNewTemp();
+		newNode->place=getNewTempOffset();
 		sprintf(newNode->code,"li.s\t$f0,%f\ns.s\t$f0,%d($sp)\n",newNode->realValue,newNode->place);
 		$$ = newNode;
 	}
@@ -1020,7 +1024,7 @@ unsignedNumber :
 		newNode->intValue = tempNode->intValue;
 		newNode->realValue = tempNode->realValue;
 		newNode->semTypeDef=storeInteger;
-		newNode->place=getNewTemp();
+		newNode->place=getNewTempOffset();
 		sprintf(newNode->code,"li\t$t0,%d\nsw\t$t0,%d($sp)\n",newNode->intValue,newNode->place);
 		$$ = newNode;
 	};
@@ -1039,7 +1043,6 @@ integer :
 	TOKEN_INTEGER
 	{
 		Node *newNode = createNode();
-		
 		newNode->type = integer;
 		newNode->intValue = atoi(yytext);
 		newNode->semTypeDef=storeInteger;  
@@ -1391,7 +1394,7 @@ booleanSecondary :
 		newNode->type = booleanSecondary;
 		newNode->pt1 = $2;
 		Node* tempNode = $2;
-		newNode->place = getNewTemp();
+		newNode->place = getNewTempOffset();
 		sprintf(newNode->code,"%sli\t$t0,1\nlw\t$t1,%d($sp)\nsub\t$t2,$t0,$t1\nsw\t$t2,%d($sp)\n",tempNode->code,tempNode->place,newNode->place);
 		if (tempNode->semTypeDef==storeBoolean) {  
 			newNode->semTypeDef=storeBoolean ;  
@@ -1458,7 +1461,7 @@ logicalValue:
 	{
 		Node* newNode = createNode();
 		newNode->type = logicalValue;
-		newNode->type = getNewTemp();
+		newNode->place = getNewTempOffset();
 		if (strcmp("true",yytext)==0){
 			newNode->boolValue = true;
 			sprintf(newNode->code,"li\t$t0,1\nsw\t$t0,%d($sp)\n",newNode->place);
@@ -1481,7 +1484,7 @@ relation :
 		Node* tempNode0 = $1;
 		Node* tempNode1 = $2;
 		Node* tempNode2 = $3;
-		newNode->place = getNewTemp();
+		newNode->place = getNewTempOffset();
 		int label1 = getNewLabel();
 		int label2 = getNewLabel();
 		if(strcmp(tempNode1->identLex,">") == 0) 
@@ -2101,7 +2104,7 @@ procedureStatement :
 			else
 			{*/
 				new->semTypeDef = symbol->type;
-				new->place = getNewTemp();
+				new->place = getNewTempOffset();
 				sprintf(new->code, "sw\t$t0,-996($sp)\nsw\t$t1,-992($sp)\nsw\t$t2,-988($sp)\nsw\t$t3,-984($sp)\nsw\t$t4,-980($sp)\nsw\t$t5,-976($sp)\nsw\t$t6,-972($sp)\nsw\t$t7,-968($sp)\nsw\t$ra,-964($sp)\n%sli\t$t0,100\nsub\t$sp,$sp,$t0\njal\t%s\nli\t$t0,100\nadd\t$sp,$sp,$t0\nlw\t$t0,-996($sp)\nlw\t$t1,-992($sp)\nlw\t$t2,-988($sp)\nlw\t$t3,-984($sp)\nlw\t$t4,-980($sp)\nlw\t$t5,-976($sp)\nlw\t$t6,-972($sp)\nlw\t$t7,-968($sp)\nlw\t$ra,-964($sp)\nsw\t$v0,%d($sp)\n",temp2->code,temp1->identLex,new->place);
 
 			//}
@@ -2209,7 +2212,7 @@ functionDesignator :
 			else
 			{*/
 				new->semTypeDef = symbol->type;
-				new->place = getNewTemp();
+				new->place = getNewTempOffset();
 				sprintf(new->code, "sw\t$t0,-996($sp)\nsw\t$t1,-992($sp)\nsw\t$t2,-988($sp)\nsw\t$t3,-984($sp)\nsw\t$t4,-980($sp)\nsw\t$t5,-976($sp)\nsw\t$t6,-972($sp)\nsw\t$t7,-968($sp)\nsw\t$ra,-964($sp)\n%sli\t$t0,100\nsub\t$sp,$sp,$t0\njal\t%s\nli\t$t0,100\nadd\t$sp,$sp,$t0\nlw\t$t0,-996($sp)\nlw\t$t1,-992($sp)\nlw\t$t2,-988($sp)\nlw\t$t3,-984($sp)\nlw\t$t4,-980($sp)\nlw\t$t5,-976($sp)\nlw\t$t6,-972($sp)\nlw\t$t7,-968($sp)\nlw\t$ra,-964($sp)\nsw\t$v0,%d($sp)\n",temp2->code,temp1->identLex,new->place);
 
 			//}

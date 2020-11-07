@@ -12,7 +12,7 @@ void initializeSymbolTable() {
    	int i = 0;
 	for(i=0;i<1000;i++){
 		setCurrentOffset(i, 0);
-		setNewTempOffset(i, -1000);
+		symbolTable[i].newTempOffset = -1000;
 		setArrayOffset(i, -700);
 	}
 }
@@ -33,7 +33,6 @@ Symbol* lookUp(char *lexm,int scope){
     }
   }
   if(scope==0){
-    //printf("error:%s not found in scope %d, \n", scope,lexm);
     return NULL;
   }
   else{
@@ -54,7 +53,6 @@ Symbol* lookUpInCurrentScope(char *lexm, int scope){
 }
 
 Symbol* addEntry(char *lexm, int scope){
-  //symbolTableDisplay(scope);
   Symbol *symbolEntry = symbolTable[scope].head;
   if(symbolEntry == NULL){
     Symbol *newNodeEntry = (Symbol*)malloc(sizeof(Symbol));
@@ -74,7 +72,6 @@ Symbol* addEntry(char *lexm, int scope){
   symbolTable[scope].tail = symbolTable[scope].tail->next;
   symbolTable[scope].currentSymbol->next = newNodeEntry;
   symbolTable[scope].currentSymbol = newNodeEntry;
-  //symbolTableDisplay(scope);
   return newNodeEntry;
 }
 
@@ -108,7 +105,7 @@ void symbolTableDisplay(int scope){
   }
 }
 
-int getNewTemp(){
+int getNewTempOffset(){
   int currentScope = getCurrentScope();
   symbolTable[currentScope].newTempOffset-=4;
   return symbolTable[currentScope].newTempOffset+4;
@@ -130,16 +127,7 @@ void setCurrentOffset(int idx, int offset) {
   symbolTable[idx].currentOffset = offset;
 }
 
-int getNewTempOffset(int idx) {
-  return symbolTable[idx].newTempOffset;
-}
-
 void setNewTempOffset(int idx, int offset) {
-  symbolTable[idx].newTempOffset = offset;
-}
-
-void setParent(int idx, int scope) {
-  symbolTable[idx].parent = scope;
 }
 
 void pushScope() {
@@ -147,7 +135,7 @@ void pushScope() {
 	if (scopeStackTop<100) {
 		scopeStack[scopeStackTop] = globalLevel;
 		scopeStackTop++;
-	        setParent(globalLevel, currentScope);
+		symbolTable[globalLevel].parent = currentScope;
 	}
 	else {
 		printf("error: Scope stack overflow\n");

@@ -12,7 +12,7 @@ COUNT=0
 # and it chops off the newline
 while read
 do
-    if [[ "${REPLY}" == "error: encountered on this token->" ]]
+    if [[ "${REPLY}" == "error: encountered on this token-><-" ]]
     then
 	let COUNT+=1
     fi
