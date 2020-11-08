@@ -17,8 +17,6 @@ int main(int argc, char* argv[]) {
 	  yyin = fopen(argv[i], "r");
 	  yyparse();
 	}
-	//printf("%s",code);
-	//check while merging the codes
 	char code1[99999];
 	strcpy(code1,"b\tmain\n");
 	strcat(code1,code);
