@@ -19,21 +19,22 @@ void errorMessage() {
 letter			[a-zA-Z]
 digit	 		[0-9]
 logical_value		"true"|"false"
-logical_operator	"|"|"&"|"!"
+
 arithmetic_operator	"+"|"-"|"*"|"/"|"**"
 relational_operator	"<"|"<="|"="|">"|">="|"<>"
+logical_operator	"|"|"&"|"!"
 sequential_operator	"goto"|"if"|"then"|"else"|"for"|"do"
+operator		{logical_operator}|{arithmetic_operator}|{relational_operator}|{sequential_operator}
+
 separator		","|"."|"\'10\'"|":"|";"|":="|" "|"step"|"until"|"while"|"comment"
-
 bracket			"("|")"|"["|"]"|"`"|"'"|"begin"|"end"
-
 declarator		"own"|"Boolean"|"integer"|"real"|"array"|"switch"|"procedure"
-
 specificator		"string"|"label"|"value"
 
-operator		{logical_operator}|{arithmetic_operator}|{relational_operator}|{sequential_operator}
 delimiter		{operator}|{separator}|{bracket}|{declarator}|{specificator}
+
 basic_symbol		{letter}|{digit}|{logical_value}|{delimiter}
+
 identifier		{letter}({letter}|{digit})*
 
 unsigned_integer	{digit}+
@@ -83,15 +84,6 @@ COMMENT[^.;]*;		{
 "**"			{return TOKEN_POWER;}
 
 {relational_operator}	{return TOKEN_REL_OP;}
-
- /* 
-  "<"			{return TOKEN_LESS ;}
-  "<="			{return TOKEN_LESS_EQUAL ;}
-  "="			{return TOKEN_EQUAL ;}
-  ">"			{return TOKEN_GREATER ;}
-  ">="			{return TOKEN_GREATER_EQUAL ;}
-  "<>"			{return TOKEN_NOTEQUAL ;}
- */
 
 ","			{return TOKEN_COMMA ;}
 ";"			{return TOKEN_SEMICOLON ;}
