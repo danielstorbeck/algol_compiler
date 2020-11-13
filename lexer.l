@@ -11,7 +11,7 @@
 int lineNo = 1;
 
 void errorMessage() {
-        fprintf(stderr,"scanning error: invalid input character ->%s<-\n", yytext);
+        fprintf(stderr,"scanning error on line %d: invalid input character ->%s<-\n", lineNo, yytext);
 }
 
 %}
