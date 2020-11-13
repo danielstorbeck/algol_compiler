@@ -13,12 +13,13 @@
 
 extern char* yytext;
 extern int yylex();
-
+extern int lineNo;
+ 
 int currentGlobalOffset=0;
 char code[99999];
 
 void yyerror(const char *str) {
-        fprintf(stderr,"parsing error on this token ->%s<-\n", yytext);
+  fprintf(stderr,"parsing error on line %d at token ->%s<-\n", lineNo, yytext);
 }
 
 int yywrap() {
@@ -157,7 +158,8 @@ blockHead :
 		strcpy(newNode->code,tempNode->code);
 		$$=newNode;
 	}
-	|blockHead TOKEN_SEMICOLON declaration
+	|
+	blockHead TOKEN_SEMICOLON declaration
 	{
 		Node* newNode = createNode();
 		Node* tempNode1 = $1;
@@ -176,7 +178,8 @@ unlabelledBlock :
 		newNode->pt0 = $3;
 		sprintf(newNode->code,"%s%s",tempNode1->code,tempNode2->code);
 		$$ = newNode;
-	};
+	}
+        ;
 
 block :
 	unlabelledBlock 
@@ -188,15 +191,7 @@ block :
 		$$ = newNode;
 	}
 	|
-	tlabel
-	/*{
-		Node* newNode = createNode();
-		newNode->pt0 = $1;
-		Node *tempNode = $1;
-		strcpy(newNode->identLex, tempNode->identLex);
-		$$ = newNode;
-	}
-	TOKEN_COLON*/ block
+	tlabel block
 	{
 		Node *newNode = createNode();
 		newNode->pt0 = $2;
@@ -207,32 +202,18 @@ block :
 		int label = getNewLabel();
 		sprintf(newNode->code,"b\tlabel%d\n%s:\n%slabel%d:\n",label, tempNode1->identLex, tempNode2->code,label);
 		$$ = newNode;
-		//printf("labelled block\n");
-	}
-	/*|
-	error
-	{
-		//printf("Syntax error in block containing line num %d\n",lineNo);
-	}*/
-	;
 
-/*label :    ////check////
-	TOKEN_LABEL_IDENTIFIER
-	{
-		Node *new = createNode();         	
-                new->type = label;
-		strcpy(new->identLex, yytext);
-		$$ = new;
 	};
-*/
 
-tlabel : label TOKEN_COLON
+tlabel :
+        label TOKEN_COLON
 	{
 		Node* newNode = createNode();
 		Node* tempNode = $1;
 		strcpy(newNode->identLex,tempNode->identLex);
 		$$=newNode;
-	};
+	}
+        ;
 
 label :
 	identifier
@@ -261,7 +242,6 @@ program :
 		printSymbolTable();
 		$$=newNode;
 	}
-	
 	| block
 	{
 		Node* newNode = createNode();
@@ -271,12 +251,11 @@ program :
 		printSymbolTable();
 		$$=newNode;
 	}
-	
-	
 	;
 
 unlabelledCompound :
-	TOKEN_BEGIN compoundTail{
+	TOKEN_BEGIN compoundTail
+	{
 		Node* newNode = createNode();
 		Node* tempNode = $2;
 		strcpy(newNode->code,tempNode->code);
@@ -293,7 +272,7 @@ compoundStatement :
 		$$=newNode;	
 	}
 	|
-	tlabel /*TOKEN_COLON*/ compoundStatement
+	tlabel compoundStatement
 	{
 		Node* newNode = createNode();
 		Node* tempNode1 = $1;
@@ -323,15 +302,12 @@ compoundTail :
 		sprintf(newNode->code,"%s%s",tempNode1->code,tempNode2->code);
 		$$ = newNode;
 	}
-	
-	
 	;
 
 declaration : 
 	typeDeclaration
 	{
 		Node* newNode = createNode();
-		//Node* tempNode = $1;
 		strcpy(newNode->code,"");
 		$$=newNode;
 	}	 
@@ -339,14 +315,12 @@ declaration :
 	arrayDeclaration
 	{
 		Node* newNode = createNode();
-		//Node* tempNode = $1;
 		strcpy(newNode->code,"");
 		$$=newNode;
 	}
 	|
 	switchDeclaration{
 		Node* newNode = createNode();
-		//Node* tempNode = $1;
 		strcpy(newNode->code,"");
 		$$=newNode;
 	}
@@ -359,7 +333,6 @@ declaration :
 		$$=newNode;
 	};
 
-
 lowerBound:
 	arithmeticExpression
 	{
@@ -369,11 +342,11 @@ lowerBound:
 		Node *tempNode = $1;
 		newNode->place = tempNode->place;
 		strcpy(newNode->code,tempNode->code);
-		if(tempNode->semTypeDef==storeInteger){
+		if(tempNode->semTypeDef==storeInteger) {
 			newNode->semTypeDef = storeInteger;
 			newNode->intValue = tempNode->intValue;
 		}
-		else{
+		else {
 			printf("error in array declaration-> lowerbound should be integer\n");
 		}
 		$$=newNode;
@@ -388,11 +361,11 @@ upperBound:
 		Node *tempNode = $1;
 		newNode->place = tempNode->place;
 		strcpy(newNode->code,tempNode->code);
-		if(tempNode->semTypeDef==storeInteger){
+		if(tempNode->semTypeDef==storeInteger) {
 			newNode->semTypeDef = storeInteger;
 			newNode->intValue = tempNode->intValue;
 		}
-		else{
+		else {
 			printf("error in array declaration-> upperbound should be integer\n");
 		}
 		$$=newNode;
@@ -402,23 +375,20 @@ boundPair :
 	lowerBound TOKEN_COLON upperBound
 	{
 		Node* newNode = createNode();         	  
-    	newNode->type = boundPair;
-    	newNode->pt0 = $1;
+		newNode->type = boundPair;
+		newNode->pt0 = $1;
 		newNode->pt2 = $3;
 		Node* tempNodeOne = $1;
 		Node* tempNodeTwo = $3;
-		
-		if (tempNodeOne->semTypeDef==storeInteger && tempNodeTwo->semTypeDef==storeInteger && tempNodeOne->intValue <= tempNodeTwo->intValue){
+		if (tempNodeOne->semTypeDef==storeInteger && tempNodeTwo->semTypeDef==storeInteger && tempNodeOne->intValue <= tempNodeTwo->intValue) {
 			newNode->semTypeDef=storeBoundPairList;
 			sprintf(newNode->code,"%s%s",tempNodeOne->code,tempNodeTwo->code);
 			newNode->lowerBound[0] = tempNodeOne->intValue;
 			newNode->upperBound[0] = tempNodeTwo->intValue;
 		}
-		else {
-			
-		}
 		$$ = newNode;
-	};
+	}
+        ;
 
 boundPairList :
 	boundPair
@@ -440,14 +410,14 @@ boundPairList :
 	{
 		Node* newNode = createNode();
 		newNode->type = boundPairList;
-        newNode->pt0 = $1;
+		newNode->pt0 = $1;
 		newNode->pt2 = $3;
 		Node* tempNodeOne = $1;
 		Node* tempNodeTwo = $3;
 		int i;
-		if (tempNodeOne->semTypeDef==storeBoundPairList && tempNodeTwo->semTypeDef==storeBoundPairList ){
+		if (tempNodeOne->semTypeDef==storeBoundPairList && tempNodeTwo->semTypeDef==storeBoundPairList ) {
 			newNode->semTypeDef=storeBoundPairList;
-			for(i=tempNodeOne->dim-1;i>=0;i--){
+			for(i=tempNodeOne->dim-1;i>=0;i--) {
 				newNode->lowerBound[i] = tempNodeOne->lowerBound[i];
 				newNode->upperBound[i] = tempNodeOne->upperBound[i];
 			}
@@ -458,9 +428,9 @@ boundPairList :
 		else {
 			printf("error in boundpairlist semantic type definition\n");			
 		}
-		
 		$$ = newNode;
-	};
+	}
+        ;
 
 arrayIdentifier :
 	identifier
@@ -484,14 +454,14 @@ arraySegment :
 		Node *tempNodeOne = $1;
 		Node *tempNodeTwo = $3;
 		Symbol* entry = lookUpInCurrentScope(tempNodeOne->identLex, getCurrentScope());
-		if(entry==NULL){
+		if(entry==NULL) {
 		  entry = addEntry(tempNodeOne->identLex, getCurrentScope());			
 		}
-		int size =1;
+		int size = 1;
 		entry->dim = tempNodeTwo->dim;
 		newNode->dim = tempNodeTwo->dim;
 		int i;
-		for(i=tempNodeTwo->dim-1;i>=0;i--){
+		for(i=tempNodeTwo->dim-1;i>=0;i--) {
 			entry->lowerBound[i] = tempNodeTwo->lowerBound[i];
 			entry->upperBound[i] = tempNodeTwo->upperBound[i];
 			newNode->lowerBound[i] = tempNodeTwo->lowerBound[i];
@@ -512,15 +482,14 @@ arraySegment :
 		Node *tempNodeOne = $1;
 		Node *tempNodeTwo = $3;
 		Symbol* entry = lookUpInCurrentScope(tempNodeOne->identLex, getCurrentScope());
-		if(entry==NULL){
+		if(entry==NULL) {
 		  entry = addEntry(tempNodeOne->identLex, getCurrentScope());			
 		}
 		int size =1;
 		entry->dim = tempNodeTwo->dim;
 		newNode->dim = tempNodeTwo->dim;
 		int i;
-		
-		for(i=tempNodeTwo->dim-1;i>=0;i--){
+		for(i=tempNodeTwo->dim-1;i>=0;i--) {
 			entry->lowerBound[i] = tempNodeTwo->lowerBound[i];
 			entry->upperBound[i] = tempNodeTwo->upperBound[i];
 			newNode->lowerBound[i] = tempNodeTwo->lowerBound[i];
@@ -533,14 +502,12 @@ arraySegment :
 		strcat(newNode->identLex,",");		
 		strcat(newNode->identLex,tempNodeOne->identLex);
 		$$ = newNode;
-		
-	}////check////
+	}
 	;
 
 arrayList :
 	arraySegment 
 	{
-				
 		Node* tempNode0=$-1;
 		Node* tempNode1=$1;
 		char* pch;
@@ -548,45 +515,39 @@ arrayList :
   		while (pch != NULL)
   		{
 		  Symbol* symbolEntry=lookUpInCurrentScope(pch, getCurrentScope());
-			if (symbolEntry!=NULL){
-				symbolEntry->type=tempNode0->semTypeDef;//return 0;
+			if (symbolEntry!=NULL) {
+				symbolEntry->type=tempNode0->semTypeDef;
 			}
-			else{
+			else {
 			  symbolEntry = addEntry(pch, getCurrentScope());
 				symbolEntry->type=tempNode0->semTypeDef;
 				symbolEntry->dim=tempNode1->dim;
 			}
   			pch = strtok (NULL, ",");
  		}
-					 
-		$$=$-1; ////check////
-		
+		$$=$-1;
 	}
 	|
-	arrayList TOKEN_COMMA arraySegment////check////  
+	arrayList TOKEN_COMMA arraySegment
 	{
 		Node* tempNode0=$1;
 		Node* tempNode1=$3;
 		Symbol* symbolEntry=lookUpInCurrentScope(tempNode1->identLex, getCurrentScope());
-		if (symbolEntry!=NULL){
-			symbolEntry->type=tempNode0->semTypeDef;//return 0;
+		if (symbolEntry!=NULL) {
+			symbolEntry->type=tempNode0->semTypeDef;
 		}
-		else{
+		else {
 		  symbolEntry = addEntry(tempNode1->identLex, getCurrentScope());
 			symbolEntry->type=tempNode0->semTypeDef;
 			symbolEntry->dim=tempNode1->dim;
 		}
-		$$=$1; ////check////
+		$$=$1;
 	}
 	;
 
 arrayDeclaration :
 	type TOKEN_ARRAY arrayList
-	{
-		//$$=$3;
-	}
 	;
-
 
 expression :
 	arithmeticExpression
@@ -625,7 +586,6 @@ arithmeticExpression :
 		newNode->type = arithmeticExpression;
 		newNode->pt0 = $1;
 		Node* tempNode = (Node*)$1;
-		//remember to check type
 		newNode->realValue = tempNode->realValue;
 		newNode->intValue = tempNode->intValue;
 		newNode->semTypeDef = tempNode->semTypeDef;
@@ -663,13 +623,13 @@ simpleArithmeticExpression :
 		Node* tempNode = (Node*)$1;
 		newNode->intValue = tempNode->intValue;
 		newNode->realValue = tempNode->realValue;
-		newNode->semTypeDef=tempNode->semTypeDef ;
+		newNode->semTypeDef=tempNode->semTypeDef;
 		newNode->place=tempNode->place;
 		strcpy(newNode->code,tempNode->code);
 		$$ = newNode;
-		
 	}
-	| TOKEN_PLUS term ////check////
+	|
+	TOKEN_PLUS term
 	{
 		Node *newNode = createNode();
 		newNode->type = simpleArithmeticExpression;
@@ -677,13 +637,13 @@ simpleArithmeticExpression :
 		Node* tempNode = (Node*)$2;
 		newNode->intValue = tempNode->intValue;
 		newNode->realValue = tempNode->realValue;
-		newNode->semTypeDef=tempNode->semTypeDef ;
+		newNode->semTypeDef=tempNode->semTypeDef;
 		newNode->place=tempNode->place;
 		strcpy(newNode->code,tempNode->code);
 		$$ = newNode;
-
 	}
-	| TOKEN_MINUS term ////check////
+	|
+	TOKEN_MINUS term
 	{
 		Node *newNode = createNode();
 		newNode->type = simpleArithmeticExpression;
@@ -691,18 +651,16 @@ simpleArithmeticExpression :
 		Node* tempNode = (Node*)$2;
 		newNode->intValue = 0-tempNode->intValue;
 		newNode->realValue = 0.0-tempNode->realValue;
-		newNode->semTypeDef=tempNode->semTypeDef ;
+		newNode->semTypeDef=tempNode->semTypeDef;
 		newNode->place=getNewTempOffset();
-		if(tempNode->semTypeDef == storeReal){
+		if (tempNode->semTypeDef == storeReal) {
 			sprintf(newNode->code,"%s\nli.s\t$f0,0.0\nl.s\t$f1,%d($sp)\nsub\t$f2,$f0,$f1\ns.s\t$f2,%d($sp)\n",tempNode->code,tempNode->place,newNode->place);
 		}
-		else{
+		else {
 			sprintf(newNode->code,"%s\nli\t$t0,0\nlw\t$t1,%d($sp)\nsub\t$t2,$t0,$t1\nsw\t$t2,%d($sp)\n",tempNode->code,tempNode->place,newNode->place);
 		}
 		$$ = newNode;
-
 	}
-	
 	|
 	simpleArithmeticExpression TOKEN_PLUS term
 	{
@@ -715,21 +673,19 @@ simpleArithmeticExpression :
 		Node* tempNode1 = (Node*)$2;
 		Node* tempNode2 = (Node*)$3;
 		sprintf(newNode->code,"%s%s",tempNode0->code,tempNode2->code);
-		if (tempNode0->semTypeDef==storeReal  || tempNode2->semTypeDef==storeReal)
+		if (tempNode0->semTypeDef==storeReal || tempNode2->semTypeDef==storeReal)
 		{			
 			newNode->semTypeDef = storeReal ;  
 			if (tempNode0->semTypeDef==storeInteger) {  
 				tempNode0->realValue = 1.00*tempNode0->intValue;  
 				tempNode0->semTypeDef==storeReal;
 				sprintf(newNode->code,"%slw\t$t0,%d($sp)\nmtc1\t$t0,$f0\ncvt.s.w\t$f0,$f0\ns.s\t$f0,%d($sp)\n",newNode->code,tempNode0->place,tempNode0->place);
-				
 			}
 			else if (tempNode2->semTypeDef==storeInteger) {  
 				tempNode2->realValue = 1.00*tempNode2->intValue;  
 				tempNode2->semTypeDef==storeReal;
 				sprintf(newNode->code,"%slw\t$t0,%d($sp)\nmtc1\t$t0,$f0\ncvt.s.w\t$f0,$f0\ns.s\t$f0,%d($sp)\n",newNode->code,tempNode2->place,tempNode2->place);
 			}
-
 			newNode->realValue=tempNode0->realValue  +  tempNode2->realValue;
 			sprintf(newNode->code,"%sl.s\t$f0,%d($sp)\nl.s\t$f1,%d($sp)\nadd.s\t$f2,$f0,$f1\ns.s\t$f2,%d($sp)\n",newNode->code,tempNode0->place,tempNode2->place,tempNode0->place);
 			newNode->place = tempNode0->place;	
@@ -754,8 +710,8 @@ simpleArithmeticExpression :
 		Node* tempNode1 = (Node*)$2;
 		Node* tempNode2 = (Node*)$3;
 		sprintf(newNode->code,"%s%s",tempNode0->code,tempNode2->code);
-		if (tempNode0->semTypeDef==storeReal  || tempNode2->semTypeDef==storeReal) {  
-			newNode->semTypeDef = storeReal ;  
+		if (tempNode0->semTypeDef==storeReal || tempNode2->semTypeDef==storeReal) {  
+			newNode->semTypeDef = storeReal;  
 			if (tempNode0->semTypeDef==storeInteger) {  
 				tempNode0->realValue = 1.00*tempNode0->intValue;  
 				tempNode0->semTypeDef==storeReal;
@@ -806,89 +762,83 @@ term :
 		Node* tempNode1 = (Node*)$2;
 		Node* tempNode2 = (Node*)$3;
 		sprintf(newNode->code,"%s%s",tempNode0->code,tempNode2->code);
-			if (tempNode0->semTypeDef==storeReal  || tempNode2->semTypeDef==storeReal) {  
-				newNode->semTypeDef = storeReal ;  
-				if (tempNode0->semTypeDef==storeInteger) {     
-					tempNode0->realValue = 1.00*tempNode0->intValue ;  
-					tempNode0->semTypeDef==storeReal;
-					sprintf(newNode->code,"%slw\t$t0,%d($sp)\nmtc1\t$t0,$f0\ncvt.s.w\t$f0,$f0\ns.s\t$f0,%d($sp)\n",newNode->code,tempNode0->place,tempNode0->place);
-				}
-				else if (tempNode2->semTypeDef==storeInteger) {  
-					tempNode2->realValue = 1.00*tempNode2->intValue ;  
-					tempNode2->semTypeDef==storeReal;
-					sprintf(newNode->code,"%slw\t$t0,%d($sp)\nmtc1\t$t0,$f0\ncvt.s.w\t$f0,$f0\ns.s\t$f0,%d($sp)\n",newNode->code,tempNode2->place,tempNode2->place);
-				}
-
-					newNode->realValue=tempNode0->realValue  *  tempNode2->realValue;
-					sprintf(newNode->code,"%sl.s\t$f0,%d($sp)\nl.s\t$f1,%d($sp)\nmul.s\t$f0,$f0,$f1\ns.s\t$f0,%d($sp)\n",newNode->code,tempNode0->place,tempNode2->place,tempNode0->place);
+		if (tempNode0->semTypeDef==storeReal || tempNode2->semTypeDef==storeReal) {  
+			newNode->semTypeDef = storeReal ;  
+			if (tempNode0->semTypeDef==storeInteger) {     
+				tempNode0->realValue = 1.00*tempNode0->intValue ;  
+				tempNode0->semTypeDef==storeReal;
+				sprintf(newNode->code,"%slw\t$t0,%d($sp)\nmtc1\t$t0,$f0\ncvt.s.w\t$f0,$f0\ns.s\t$f0,%d($sp)\n",newNode->code,tempNode0->place,tempNode0->place);
 			}
-			else {  
-				newNode->semTypeDef = storeInteger ;  
-				newNode->intValue = tempNode0->intValue*tempNode2->intValue ;
-				sprintf(newNode->code,"%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nmult\t$t0,$t1\nmflo\t$t0\nsw\t$t0,%d($sp)\n",newNode->code,tempNode0->place,tempNode2->place,tempNode0->place);
+			else if (tempNode2->semTypeDef==storeInteger) {  
+				tempNode2->realValue = 1.00*tempNode2->intValue ;  
+				tempNode2->semTypeDef==storeReal;
+				sprintf(newNode->code,"%slw\t$t0,%d($sp)\nmtc1\t$t0,$f0\ncvt.s.w\t$f0,$f0\ns.s\t$f0,%d($sp)\n",newNode->code,tempNode2->place,tempNode2->place);
 			}
-			newNode->place=tempNode0->place;
-			$$ = newNode;
+				newNode->realValue=tempNode0->realValue  *  tempNode2->realValue;
+				sprintf(newNode->code,"%sl.s\t$f0,%d($sp)\nl.s\t$f1,%d($sp)\nmul.s\t$f0,$f0,$f1\ns.s\t$f0,%d($sp)\n",newNode->code,tempNode0->place,tempNode2->place,tempNode0->place);
 		}
-		|
-		term TOKEN_DIVIDE factor
-		{
-		
-			Node *newNode = createNode();			//check declaration here...
-			Node* tempNode0 = (Node*)$1;
-			Node* tempNode1 = (Node*)$2;
-			Node* tempNode2 = (Node*)$3;
-			sprintf(newNode->code,"%s%s",tempNode0->code,tempNode2->code);
-			if (tempNode0->semTypeDef==storeReal  || tempNode2->semTypeDef==storeReal) {  
-				newNode->semTypeDef = storeReal ;  
-				if (tempNode0->semTypeDef==storeInteger){
-					tempNode0->realValue = 1.00*tempNode0->intValue ;  
-					tempNode0->semTypeDef==storeReal;
-					sprintf(newNode->code,"%slw\t$t0,%d($sp)\nmtc1\t$t0,$f0\ncvt.s.w\t$f0,$f0\ns.s\t$f0,%d($sp)\n",newNode->code,tempNode0->place,tempNode0->place);
-				}
-				else if (tempNode2->semTypeDef==storeInteger) {
-					tempNode2->realValue = 1.00*tempNode2->intValue;
-					tempNode2->semTypeDef==storeReal;
-					sprintf(newNode->code,"%slw\t$t0,%d($sp)\nmtc1\t$t0,$f0\ncvt.s.w\t$f0,$f0\ns.s\t$f0,%d($sp)\n",newNode->code,tempNode2->place,tempNode2->place);
-				}
-
-				if (tempNode2->realValue==0.00){
-					exit(0);
-				}
-				else {
-					newNode->realValue=tempNode0->realValue/tempNode2->realValue;
-					sprintf(newNode->code,"%sl.s\t$f0,%d($sp)\nl.s\t$f1,%d($sp)\ndiv.s\t$f1,$f0,$f1\ns.s\t$f1,%d($sp)\n",newNode->code, tempNode0->place, tempNode2->place, tempNode0->place);
-					newNode->place = tempNode0->place;
-				}
+		else {  
+			newNode->semTypeDef = storeInteger ;  
+			newNode->intValue = tempNode0->intValue*tempNode2->intValue ;
+			sprintf(newNode->code,"%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nmult\t$t0,$t1\nmflo\t$t0\nsw\t$t0,%d($sp)\n",newNode->code,tempNode0->place,tempNode2->place,tempNode0->place);
+		}
+		newNode->place=tempNode0->place;
+		$$ = newNode;
+	}
+	|
+	term TOKEN_DIVIDE factor
+	{
+		Node *newNode = createNode();
+		Node* tempNode0 = (Node*)$1;
+		Node* tempNode1 = (Node*)$2;
+		Node* tempNode2 = (Node*)$3;
+		sprintf(newNode->code,"%s%s",tempNode0->code,tempNode2->code);
+		if (tempNode0->semTypeDef==storeReal || tempNode2->semTypeDef==storeReal) {  
+			newNode->semTypeDef = storeReal ;  
+			if (tempNode0->semTypeDef==storeInteger) {
+				tempNode0->realValue = 1.00*tempNode0->intValue ;  
+				tempNode0->semTypeDef==storeReal;
+				sprintf(newNode->code,"%slw\t$t0,%d($sp)\nmtc1\t$t0,$f0\ncvt.s.w\t$f0,$f0\ns.s\t$f0,%d($sp)\n",newNode->code,tempNode0->place,tempNode0->place);
 			}
-			else {  
-				newNode->semTypeDef = storeInteger;
-				if (tempNode2->intValue==0){
-							exit(0);
-				}
-				else {
-					newNode->intValue = tempNode0->intValue/tempNode2->intValue;
-					sprintf(newNode->code,"%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\ndiv\t$t0,$t1\nmflo\t$t1\nsw\t$t1,%d($sp)\n",newNode->code, tempNode0->place, tempNode2->place, tempNode0->place);
-					newNode->place=tempNode0->place;
-				}
+			else if (tempNode2->semTypeDef==storeInteger) {
+				tempNode2->realValue = 1.00*tempNode2->intValue;
+				tempNode2->semTypeDef==storeReal;
+				sprintf(newNode->code,"%slw\t$t0,%d($sp)\nmtc1\t$t0,$f0\ncvt.s.w\t$f0,$f0\ns.s\t$f0,%d($sp)\n",newNode->code,tempNode2->place,tempNode2->place);
 			}
-			$$ = newNode;
-		//}
-		
-	};
-
+			if (tempNode2->realValue==0.00) {
+				exit(0);
+			}
+			else {
+				newNode->realValue=tempNode0->realValue/tempNode2->realValue;
+				sprintf(newNode->code,"%sl.s\t$f0,%d($sp)\nl.s\t$f1,%d($sp)\ndiv.s\t$f1,$f0,$f1\ns.s\t$f1,%d($sp)\n",newNode->code, tempNode0->place, tempNode2->place, tempNode0->place);
+				newNode->place = tempNode0->place;
+			}
+		}
+		else {  
+			newNode->semTypeDef = storeInteger;
+			if (tempNode2->intValue==0) {
+				exit(0);
+			}
+			else {
+				newNode->intValue = tempNode0->intValue/tempNode2->intValue;
+				sprintf(newNode->code,"%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\ndiv\t$t0,$t1\nmflo\t$t1\nsw\t$t1,%d($sp)\n",newNode->code, tempNode0->place, tempNode2->place, tempNode0->place);
+				newNode->place=tempNode0->place;
+			}
+		}
+		$$ = newNode;
+	}
+        ;
 
 factor : 
 	primary
 	{
 		Node* newNode = createNode();
-		
 		newNode->type = factor;
 		newNode->pt0 = $1;
 		Node* tempNode = (Node*)$1;
 		newNode->intValue = tempNode->intValue;
 		newNode->realValue = tempNode->realValue;
-		newNode->semTypeDef=tempNode->semTypeDef ; 
+		newNode->semTypeDef=tempNode->semTypeDef; 
 		newNode->place=tempNode->place;
 		strcpy(newNode->code,tempNode->code); 
 		$$ = newNode;
@@ -897,28 +847,14 @@ factor :
 	factor TOKEN_POWER primary
 	{
 		Node *newNode = createNode();
-		
 		newNode->type = factor;
 		newNode->pt0 = $1;
 		newNode->pt2 = $3;
 		Node* tempNode0 = (Node*)$1;
 		Node* tempNode1 = (Node*)$3;
-		
 		$$ = newNode;
-		
 	}
-	/*| ////check////
-	procedureStatement
-	{
-		Node *newNode = createNode();
-		Node* tempNode = (Node*)$1;
-		newNode->intValue = tempNode->intValue;
-		newNode->realValue = tempNode->realValue;
-		newNode->semTypeDef=tempNode->semTypeDef;
-		newNode->place = tempNode->place;
-		strcpy(newNode->code,tempNode->code);
-		$$ = newNode;
-	}*/;
+	;
 
 primary :
 	unsignedNumber
@@ -933,10 +869,10 @@ primary :
 		newNode->place=tempNode->place;
 		strcpy(newNode->code,tempNode->code);
 		$$ = newNode;
-	
 	}
 	|	
-	functionDesignator{
+	functionDesignator
+	{
 		Node *newNode = createNode();
 		newNode->type = primary;
 		newNode->pt0 = $1;
@@ -955,7 +891,6 @@ primary :
 		newNode->type = primary;
 		newNode->pt0 = $1;
 		Node *tempNode = (Node*)$1;
-// do type checking and proper lookup
 		Symbol* foundEntry = lookUp(tempNode->identLex,getCurrentScope());
 		if (foundEntry)
 		{	
@@ -964,30 +899,28 @@ primary :
 			newNode->semTypeDef= foundEntry->type ;
 			newNode->place=getNewTempOffset();
 			int offset;
-			if (tempNode->isArray == 1){
+			if (tempNode->isArray == 1) {
 				offset = tempNode->place;
 			}
-			else{
+			else {
 				offset = foundEntry->offset;
 			}
-			if(foundEntry->type==storeReal){
+			if (foundEntry->type==storeReal) {
 				sprintf(newNode->code,"%sl.s\t$f0,%d($sp)\ns.s\t$f0,%d($sp)\n",tempNode->code,offset,newNode->place);	
 			}
-			else{
+			else {
 				sprintf(newNode->code,"%slw\t$t0,%d($sp)\nsw\t$t0,%d($sp)\n",tempNode->code,offset,newNode->place);	
 			}
 		}
-		else
-			printf("error: %s not declared\n",tempNode->identLex);		
+		else {
+			printf("error: %s not declared\n",tempNode->identLex);
+		}
 		$$ = newNode;
-
-		
 	}
 	|
 	TOKEN_OPEN_BRACKET arithmeticExpression TOKEN_CLOSE_BRACKET
 	{
 		Node *newNode = createNode();
-		
 		newNode->type = primary;
 		newNode->pt1 = $2;
 		Node *tempNode = (Node*)$2;  
@@ -997,7 +930,8 @@ primary :
 		newNode->place=tempNode->place;
 		strcpy(newNode->code,tempNode->code);
 		$$ = newNode;
-	};
+	}
+        ;
 
 unsignedNumber :
 	realNumber
@@ -1063,7 +997,8 @@ simpleVariable :
 		new->place=temp->place;
 		strcpy(new->code,temp->code);
 		$$ = new;
-	};
+	}
+        ;
 
 variable : 
 	simpleVariable
@@ -1097,13 +1032,13 @@ variable :
 		strcpy(newNode->code,tempNode->code);
 		strcpy(newNode->identLex, tempNode->identLex);
 		$$ = newNode;
-	};	
+	}
+        ;	
 
 subscriptedVariable :
 	arrayIdentifier TOKEN_OPEN_SQUARE_BRACKET subscriptList TOKEN_CLOSE_SQUARE_BRACKET
 	{
 		Node* newNode = createNode();
-		               	  
 		newNode->type = subscriptedVariable;
 		newNode->pt0 = $1;
 		newNode->pt2 = $3;
@@ -1117,30 +1052,27 @@ subscriptedVariable :
 		}
 		else
 		{	
-			if(tempNode1->semTypeDef == storeInteger){		
+			if (tempNode1->semTypeDef == storeInteger) {		
 				newNode->semTypeDef = foundEntry->type;
 				int i;
-
 				int offset = foundEntry->offset - (tempNode1->lowerBound[tempNode1->dim-1]-foundEntry->lowerBound[tempNode1->dim-1])*4;
-				for(i=foundEntry->dim-1;i>0;i--){
-					if(tempNode1->lowerBound[i-1] <= foundEntry->upperBound[i-1] && tempNode1->lowerBound[i-1] >= foundEntry->lowerBound[i-1]){
+				for (i=foundEntry->dim-1;i>0;i--) {
+					if (tempNode1->lowerBound[i-1] <= foundEntry->upperBound[i-1] && tempNode1->lowerBound[i-1] >= foundEntry->lowerBound[i-1]) {
 						offset-=(foundEntry->upperBound[i]-foundEntry->lowerBound[i])*4*(tempNode1->lowerBound[i-1]-foundEntry->lowerBound[i-1]);
 					}
-					else{
+					else {
 						printf("error: array dimension is out of range\n");
 					}
 				}
 				newNode->place = offset;
 				strcpy(newNode->code,tempNode1->code);
 			}
-		
-		
 		}	
 		$$ = newNode;
 	}
 	;
 
-subscriptList:
+subscriptList :
 	subscriptExpression
 	{
 		Node* newNode = createNode();
@@ -1150,7 +1082,7 @@ subscriptList:
 		newNode->pt0 = $1;
 		newNode->place = tempNode->place;
 		strcpy(newNode->code,tempNode->code);
-		if(tempNode->semTypeDef==storeInteger){
+		if (tempNode->semTypeDef==storeInteger) {
 			newNode->semTypeDef = tempNode->semTypeDef;
 			newNode->dim = 1;
 			newNode->lowerBound[newNode->dim-1] = tempNode->intValue;
@@ -1171,10 +1103,10 @@ subscriptList:
 		Node* tempNode2 = $3;
 		newNode->semTypeDef = tempNode2->semTypeDef;
 		sprintf(newNode->code,"%s%s",tempNode1->code,tempNode2->code);
-		if(tempNode2->semTypeDef == storeInteger){
+		if (tempNode2->semTypeDef == storeInteger) {
 			newNode->semTypeDef = tempNode2->semTypeDef;
 			int i;
-			for(i=tempNode1->dim-1;i>=0;i--){
+			for (i=tempNode1->dim-1;i>=0;i--) {
 				newNode->lowerBound[i] = tempNode1->lowerBound[i];
 			}
 			newNode->dim = tempNode1->dim+1;
@@ -1184,7 +1116,8 @@ subscriptList:
 			newNode->semTypeDef = storeError;
 		}
 		$$ = newNode;
-	};
+	}
+        ;
 
 subscriptExpression :
 	arithmeticExpression
@@ -1195,10 +1128,11 @@ subscriptExpression :
 		Node* tempNode = $1;
 		newNode->semTypeDef = tempNode->semTypeDef;
 		newNode->intValue = tempNode->intValue;
-		newNode->place = tempNode->place ;
+		newNode->place = tempNode->place;
 		strcpy(newNode->code,tempNode->code);
 		$$ = newNode;
-	};
+	}
+        ;
 
 identifier :
 	TOKEN_IDENTIFIER
@@ -1208,7 +1142,8 @@ identifier :
 		strcpy(newNode->identLex,yytext);
 		sprintf(newNode->code,"");
 		$$ = newNode;
-	};
+	}
+        ;
 
 booleanExpression :
 	simpleBoolean
@@ -1219,15 +1154,15 @@ booleanExpression :
 		Node* tempNode = $1;
 		newNode->place = tempNode->place ;
 		strcpy(newNode->code,tempNode->code);
-		if(tempNode->semTypeDef == storeBoolean){
+		if (tempNode->semTypeDef == storeBoolean) {
 			newNode->semTypeDef = tempNode->semTypeDef;
 		}
-		else{
+		else {
 			newNode->semTypeDef = storeError;
 		}
 		$$ = newNode;
 	}
-	/*|   ////check////
+	/*|
 	ifClause simpleBoolean TOKEN_ELSE booleanExpression
 	{
 		Node* newNode = createNode();
@@ -1245,7 +1180,8 @@ booleanExpression :
 			newNode->semTypeDef = storeError;
 		}
 		$$ = newNode;
-	}*/;
+	}*/
+        ;
 
 simpleBoolean:
 	implication
@@ -1273,9 +1209,9 @@ simpleBoolean:
 		int label2 = getNewLabel();
 		sprintf(newNode->code,"%s%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nbeq\t$t0,$t1,label%d\nli\t$t2,0\nb\tlabel%d\nlabel%d:\nli\t$t2,1\nlabel%d:\nsw\t$t2,%d($sp)\n",tempNode1->code,tempNode2->code,tempNode1->place,tempNode2->place,label1,label2,label1,label2,tempNode1->place);
 		newNode->place = tempNode1->place;
-
 		$$ = newNode;
-	};
+	}
+        ;
 
 implication : 
 	booleanTerm
@@ -1307,8 +1243,8 @@ implication :
 			newNode->semTypeDef=storeError;
 		}
 		$$ = newNode; 
-		
-	};
+	}
+        ;
 
 booleanTerm :
 	booleanFactor
@@ -1340,7 +1276,8 @@ booleanTerm :
 			newNode->semTypeDef=storeError ;  
 		}
 		$$ = newNode;  
-	};
+	}
+        ;
 
 booleanFactor :
 	booleanSecondary
@@ -1416,9 +1353,8 @@ booleanPrimary :
 		newNode->place=tempNode->place ;  
 		strcpy(newNode->code, tempNode->code);
 		$$ = newNode;
-		
 	}
-	/*|    ////check////
+	/*|
 	variable
 	{
 		Node *newNode = createNode();
@@ -1453,7 +1389,8 @@ booleanPrimary :
 		newNode->place=tempNode->place ;  
 		strcpy(newNode->code, tempNode->code);
 		$$=newNode;
-	};
+	}
+        ;
 
 logicalValue:
 	TOKEN_LOGICAL_VALUE
@@ -1461,16 +1398,17 @@ logicalValue:
 		Node* newNode = createNode();
 		newNode->type = logicalValue;
 		newNode->place = getNewTempOffset();
-		if (strcmp("true",yytext)==0){
+		if (strcmp("true",yytext)==0) {
 			newNode->boolValue = true;
 			sprintf(newNode->code,"li\t$t0,1\nsw\t$t0,%d($sp)\n",newNode->place);
 		}
-		else{
+		else {
 			newNode->boolValue = false;
 			sprintf(newNode->code,"li\t$t0,0\nsw\t$t0,%d($sp)\n",newNode->place);
 		}
 		$$ = newNode;
-	};
+	}
+        ;
 
 relation : 
 	simpleArithmeticExpression relationalOperator simpleArithmeticExpression
@@ -1486,10 +1424,10 @@ relation :
 		newNode->place = getNewTempOffset();
 		int label1 = getNewLabel();
 		int label2 = getNewLabel();
-		if(strcmp(tempNode1->identLex,">") == 0) 
+		if (strcmp(tempNode1->identLex,">") == 0) 
 		{
 			sprintf(newNode->code,"%s%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nbgt\t$t0,$t1,label%d\nli\t$t3,0\nsw\t$t3,%d($sp)\nb\tlabel%d\nlabel%d:\nli\t$t4,1\nsw\t$t4,%d($sp)\nlabel%d:\n",tempNode0->code,tempNode2->code,tempNode0->place,tempNode2->place,label1,newNode->place,label2,label1,newNode->place,label2);
-			if(tempNode0->intValue > tempNode2->intValue)
+			if( tempNode0->intValue > tempNode2->intValue)
 			{
 				newNode->boolValue = true;
 			}
@@ -1498,7 +1436,7 @@ relation :
 				newNode->boolValue = false;
 			}
 		}
-		else if(strcmp(tempNode1->identLex,"<") == 0) 
+		else if (strcmp(tempNode1->identLex,"<") == 0) 
 		{
 			sprintf(newNode->code,"%s%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nblt\t$t0,$t1,label%d\nli\t$t3,0\nsw\t$t3,%d($sp)\nb\tlabel%d\nlabel%d:\nli\t$t4,1\nsw\t$t4,%d($sp)\nlabel%d:\n",tempNode0->code,tempNode2->code,tempNode0->place,tempNode2->place,label1,newNode->place,label2,label1,newNode->place,label2);
 			if(tempNode0->intValue < tempNode2->intValue)
@@ -1510,8 +1448,7 @@ relation :
 				newNode->boolValue = false;
 			}
 		}
-
-		else if(strcmp(tempNode1->identLex,"<=") == 0) 
+		else if (strcmp(tempNode1->identLex,"<=") == 0) 
 		{
 			sprintf(newNode->code,"%s%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nble\t$t0,$t1,label%d\nli\t$t3,0\nsw\t$t3,%d($sp)\nb\tlabel%d\nlabel%d:\nli\t$t4,1\nsw\t$t4,%d($sp)\nlabel%d:\n",tempNode0->code,tempNode2->code,tempNode0->place,tempNode2->place,label1,newNode->place,label2,label1,newNode->place,label2);
 			if(tempNode0->intValue <= tempNode2->intValue)
@@ -1523,10 +1460,10 @@ relation :
 				newNode->boolValue = false;
 			}
 		}
-		else if(strcmp(tempNode1->identLex,">=") == 0) 
+		else if (strcmp(tempNode1->identLex,">=") == 0) 
 		{
 			sprintf(newNode->code,"%s%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nbge\t$t0,$t1,label%d\nli\t$t3,0\nsw\t$t3,%d($sp)\nb\tlabel%d\nlabel%d:\nli\t$t4,1\nsw\t$t4,%d($sp)\nlabel%d:\n",tempNode0->code,tempNode2->code,tempNode0->place,tempNode2->place,label1,newNode->place,label2,label1,newNode->place,label2);
-			if(tempNode0->intValue >= tempNode2->intValue)
+			if (tempNode0->intValue >= tempNode2->intValue)
 			{
 				newNode->boolValue = true;
 			}
@@ -1535,10 +1472,10 @@ relation :
 				newNode->boolValue = false;
 			}
 		}
-		else if(strcmp(tempNode1->identLex,"<>") == 0) 
+		else if (strcmp(tempNode1->identLex,"<>") == 0) 
 		{
 			sprintf(newNode->code,"%s%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nbne\t$t0,$t1,label%d\nli\t$t3,0\nsw\t$t3,%d($sp)\nb\tlabel%d\nlabel%d:\nli\t$t4,1\nsw\t$t4,%d($sp)\nlabel%d:\n",tempNode0->code,tempNode2->code,tempNode0->place,tempNode2->place,label1,newNode->place,label2,label1,newNode->place,label2);
-			if(tempNode0->intValue != tempNode2->intValue)
+			if (tempNode0->intValue != tempNode2->intValue)
 			{
 				newNode->boolValue = true;
 			}
@@ -1547,10 +1484,10 @@ relation :
 				newNode->boolValue = false;
 			}
 		}
-		else if(strcmp(tempNode1->identLex,"=") == 0)          	
+		else if (strcmp(tempNode1->identLex,"=") == 0)          	
         	{
 			sprintf(newNode->code,"%s%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nbeq\t$t0,$t1,label%d\nli\t$t3,0\nsw\t$t3,%d($sp)\nb\tlabel%d\nlabel%d:\nli\t$t4,1\nsw\t$t4,%d($sp)\nlabel%d:\n",tempNode0->code,tempNode2->code,tempNode0->place,tempNode2->place,label1,newNode->place,label2,label1,newNode->place,label2);
-        		if(tempNode0->intValue == tempNode2->intValue)
+        		if (tempNode0->intValue == tempNode2->intValue)
         		{
         			newNode->boolValue = true;
  			}
@@ -1558,65 +1495,38 @@ relation :
 			{
 				newNode->boolValue = false;
 			}
-		     
 		}
 		newNode->semTypeDef = storeBoolean ;  
 		$$=newNode;
-	};
+	}
+        ;
 	        
-/*boolVariable : variable    ////check////
-	{
-		Node* newNode = createNode();
-		newNode->type = boolVariable;
-		newNode->pt0 = $1;
-		Node* tempNode = (Node*)$1;
-		newNode->boolValue = tempNode->boolValue;
-		newNode->semTypeDef=tempNode->semTypeDef;
-		strcpy(newNode->identLex, tempNode->identLex);
-		$$ = newNode;
-		//printf("Boolvariable->simpleVariable\n");
-	}; //{//printf("Variable Parsed \n");}
-/*
-boolSimpleVariable :
-	TOKEN_BOOL_IDENTIFIER
-	{
-		Node *newNode = createNode();
-		newNode->type = boolSimpleVariable;
-		strcpy(newNode->identLex, yytext);
-		$$ = newNode;
-	} {//////printf("Identifier parsed\n");}
-	;
-*/
 relationalOperator :
-	TOKEN_REL_OP			//check important
+	TOKEN_REL_OP
 	{	
 		Node *newNode = createNode();
 		newNode->type = relationalOperator;
 		strcpy(newNode->identLex, yytext);
 		$$ = newNode;
-	};
+	}
+        ;
 
 listType :
 	varIdentifier
 	{
-
 		Node *temp2=$0;
-
 		Node *temp1=$1;
-		//printf("belu listType\n");
-		if (lookUpInCurrentScope(temp1->identLex, getCurrentScope())!=NULL){
-			//printf("belu if\n");
+		if (lookUpInCurrentScope(temp1->identLex, getCurrentScope())!=NULL) {
 			return 0;
 		}
-		else{
-			//printf("belu else\n");			
+		else {
 		  Symbol *newEntry=addEntry(temp1->identLex, getCurrentScope());
 			newEntry->type=temp2->semTypeDef;
-			if(currentGlobalOffset <= getCurrentOffset(getCurrentScope())){
+			if (currentGlobalOffset <= getCurrentOffset(getCurrentScope())) {
 				newEntry->offset=currentGlobalOffset;
 				currentGlobalOffset-=4;
 			}
-			else{
+			else {
 				newEntry->offset=getCurrentOffset(getCurrentScope());
 				setCurrentOffset(getCurrentScope(), getCurrentOffset(getCurrentScope()) - 4);				
 			}
@@ -1624,21 +1534,21 @@ listType :
 		}
 	}
 	|
-	listType TOKEN_COMMA varIdentifier ////check////
+	listType TOKEN_COMMA varIdentifier
 	{
 		Node *temp2=$0;
 		Node *temp0=$1;
 		Node *temp1=$3;
-		if (lookUpInCurrentScope(temp1->identLex, getCurrentScope())!=NULL){
+		if (lookUpInCurrentScope(temp1->identLex, getCurrentScope())!=NULL) {
 		}
-		else{
+		else {
 		  Symbol *newEntry=addEntry(temp1->identLex, getCurrentScope());
 			newEntry->type=temp2->semTypeDef;
-			if(currentGlobalOffset <= getCurrentOffset(getCurrentScope())){
+			if (currentGlobalOffset <= getCurrentOffset(getCurrentScope())) {
 				newEntry->offset=currentGlobalOffset;
 				currentGlobalOffset-=4;
 			}
-			else{
+			else {
 				newEntry->offset=getCurrentOffset(getCurrentScope());
 				setCurrentOffset(getCurrentScope(), getCurrentOffset(getCurrentScope()) - 4);				
 			}
@@ -1647,7 +1557,6 @@ listType :
 	}
 	;
 
-
 type :
 	TOKEN_TYPE_REAL
 	{
@@ -1655,7 +1564,6 @@ type :
         	new->type = type;
         	new->semTypeDef = storeReal;
 		$$ = new;
-
 	}
 	|
 	TOKEN_TYPE_INTEGER
@@ -1664,9 +1572,7 @@ type :
         	new->type = type;
         	new->semTypeDef=storeInteger;
 		$$ = new;	
-
 	}
-
 	|
 	TOKEN_TYPE_BOOLEAN
 	{
@@ -1680,8 +1586,6 @@ type :
 typeDeclaration :
 	type listType
 	{
-	//printf("typeDeclaration\n");
-	//$$=$2;
 	}
 	;
 
@@ -1715,8 +1619,8 @@ unconditionalStatement :
 		$$ = new;
 	}
 	|
-        compoundStatement {
-
+        compoundStatement
+	{
 		Node *new = createNode();         	
         	new->type = unconditionalStatement;
         	new->pt0 = $1;
@@ -1726,8 +1630,8 @@ unconditionalStatement :
 		$$ = new;
 	}
 	|
-	block {
-
+	block
+	{
 		Node *new = createNode();
         	new->type = unconditionalStatement;
         	new->pt0 = $1;
@@ -1751,7 +1655,8 @@ conditionalStatement :
 		$$ = newNode;
 	}
 	|
-        ifStatement TOKEN_ELSE statement	{
+        ifStatement TOKEN_ELSE statement
+	{
 		Node *newNode = createNode();         	
         	newNode->type = conditionalStatement;
         	newNode->pt0 = $1 ;  
@@ -1770,8 +1675,8 @@ conditionalStatement :
 	{
 		Node *newNode = createNode();         	
 		newNode->type = conditionalStatement;
-		newNode->pt0 = $1 ;  
-		newNode->pt1 = $2 ;  
+		newNode->pt0 = $1;  
+		newNode->pt1 = $2;  
 		Node *tempNode1=$1;
 		Node *tempNode2=$2;
 		int label = getNewLabel();
@@ -1779,14 +1684,13 @@ conditionalStatement :
 			newNode->semTypeDef==storeVoid ;  
 			sprintf(newNode->code,"%sli\t$t0,0\nlw\t$t1,%d($sp)\nbeq\t$t1,$t0,label%d\n%slabel%d:\n",tempNode1->code,tempNode1->place,label,tempNode2->code,label) ;
 		}
-		else{
-			newNode->semTypeDef==storeError ;
+		else {
+			newNode->semTypeDef==storeError;
 		}
-		
 		$$=newNode;
 	}
 	|
-	tlabel /*TOKEN_COLON*/ conditionalStatement////check////
+	tlabel conditionalStatement
 	{
 		Node* newNode = createNode();
 		Node* tempNode1 = $1;
@@ -1808,7 +1712,7 @@ ifStatement :
 		Node *tempNode2 = $2;
 		int label = getNewLabel();
 		newNode->intValue = label;
-		sprintf(newNode->code,"%sli\t$t0,0\nlw\t$t1,%d($sp)\nbeq\t$t1,$t0,label%d\n%s",tempNode1->code,tempNode1->place,label,tempNode2->code) ;  
+		sprintf(newNode->code,"%sli\t$t0,0\nlw\t$t1,%d($sp)\nbeq\t$t1,$t0,label%d\n%s",tempNode1->code,tempNode1->place,label,tempNode2->code);  
 		newNode->place = tempNode1->place;
 		if (tempNode1->semTypeDef==storeBoolean) {  
 			newNode->semTypeDef=tempNode2->semTypeDef;
@@ -1816,7 +1720,6 @@ ifStatement :
 		else {
 			newNode->semTypeDef=storeError;
 		}
-		
 		$$ = newNode;
 	}
 	;
@@ -1828,7 +1731,7 @@ ifClause :
         	newNode->type = ifClause;
         	newNode->pt1 = $2;
                 Node* tempNode = (Node*)$2;
-		newNode->place = tempNode->place ;
+		newNode->place = tempNode->place;
 		strcpy(newNode->code,tempNode->code);
 		if (tempNode->semTypeDef==storeBoolean) {  
 			newNode->semTypeDef=storeBoolean ;  
@@ -1840,10 +1743,9 @@ ifClause :
 	}
 	;
 
-
 basicStatement :
-	unlabelledBasicStatement {
-
+	unlabelledBasicStatement
+	{
 		Node *new = createNode();         	
         	new->type = basicStatement;
         	new->pt0 = $1 ;  
@@ -1851,10 +1753,9 @@ basicStatement :
 		new->semTypeDef=temp->semTypeDef ;
 		strcpy(new->code,temp->code);  
 		$$ = new;
-
 	}
 	|
-        tlabel basicStatement ////check////
+        tlabel basicStatement
 	{
 		Node* newNode = createNode();
 		Node* tempNode1 = $1;
@@ -1876,10 +1777,9 @@ unlabelledBasicStatement :
 		strcpy(new->code,temp->code);
 		$$ = new;
 	}
-	| ////check//////
+	|
 	dummyStatement
 	{
-
 		Node *new = createNode();         	
         	new->type = unlabelledBasicStatement;
         	new->pt0 = $1 ;  
@@ -1887,12 +1787,10 @@ unlabelledBasicStatement :
 		strcpy(new->code,"");
 		new->semTypeDef=temp->semTypeDef ;  
 		$$ = new;
-
 	}
 	|
 	procedureStatement
 	{
-			
 		Node *new = createNode();         	
         	new->type = unlabelledBasicStatement;
         	new->pt0 = $1 ;  
@@ -1900,7 +1798,6 @@ unlabelledBasicStatement :
 		new->semTypeDef=temp->semTypeDef ;  
 		strcpy(new->code,temp->code);
 		$$ = new;
-
 	}
 	|
 	returnStatement
@@ -1918,7 +1815,8 @@ unlabelledBasicStatement :
 		strcpy(newNode->code,tempNode->code);
 	}
 	;
-dummyStatement :	///check////
+
+dummyStatement :
 	empty
 	;
 	
@@ -1938,7 +1836,8 @@ returnStatement :
 			newNode->semTypeDef = tempNode->semTypeDef;
 		}
 		$$ = newNode;
-	};
+	}
+        ;
 
 assignmentStatement :
 	variable TOKEN_ASSIGN arithmeticExpression  
@@ -2036,6 +1935,7 @@ assignmentStatement :
 		$$ = new;
 	}
 	;
+
 forStatement :
 	TOKEN_FOR variable TOKEN_ASSIGN arithmeticExpression TOKEN_STEP arithmeticExpression TOKEN_UNTIL arithmeticExpression TOKEN_DO statement
 	{  
@@ -2048,29 +1948,21 @@ forStatement :
 		Symbol *symbol=lookUp(temp->identLex,getCurrentScope());
 		if (symbol == NULL) {  
 			temp->semTypeDef=storeError;
-		
 		}
 		else {
-			if (!(symbol->type==storeInteger || symbol->type==storeReal)){
+			if (!(symbol->type==storeInteger || symbol->type==storeReal)) {
 				temp->semTypeDef=storeError;
 			}
 		}
-
-		if (temp->semTypeDef==storeError){  
+		if (temp->semTypeDef==storeError) {  
 			new->semTypeDef=storeError;
 			$$ = new;
 		}
-		else{
-			//if (temp2->semTypeDef == temp->semTypeDef && temp3->semTypeDef == temp->semTypeDef && temp4->semTypeDef == temp->semTypeDef) {
-				int label1 = getNewLabel();
-				int label2 = getNewLabel();
-				int offset = symbol->offset;
-				sprintf(new->code,"%slw\t$t0,%d($sp)\nsw\t$t0,%d($sp)\nlabel%d:\n%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nbge\t$t0,$t1,label%d\n%s%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nadd\t$t2,$t0,$t1\nsw\t$t2,%d($sp)\nb\tlabel%d\nlabel%d:\n",temp2->code,temp2->place,offset,label1,temp4->code,temp->place,temp4->place,label2,temp5->code,temp3->code,offset,temp3->place,offset,label1,label2);
-			//printf("%s",new->code);
-			//}
-			//else {
-			//	new->semTypeDef = storeError;		
-			//}
+		else {
+			int label1 = getNewLabel();
+			int label2 = getNewLabel();
+			int offset = symbol->offset;
+			sprintf(new->code,"%slw\t$t0,%d($sp)\nsw\t$t0,%d($sp)\nlabel%d:\n%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nbge\t$t0,$t1,label%d\n%s%slw\t$t0,%d($sp)\nlw\t$t1,%d($sp)\nadd\t$t2,$t0,$t1\nsw\t$t2,%d($sp)\nb\tlabel%d\nlabel%d:\n",temp2->code,temp2->place,offset,label1,temp4->code,temp->place,temp4->place,label2,temp5->code,temp3->code,offset,temp3->place,offset,label1,label2);
 			$$=new;
 		}
 	}
@@ -2083,32 +1975,23 @@ empty :
 		$$ = new;
 	}
 	;
+
 procedureStatement :
 	procedureIdentifier actualParameterPart {
 		Node *new = createNode();
 		Node *temp1 = $1;
 		Node *temp2 = $2;
 		Symbol *symbol= lookUp(temp1->identLex,getCurrentScope());
-
 		if(symbol == NULL)
 		{
 			new->semTypeDef = storeError;
 		}
 		else
 		{
-			/*if(temp2->semTypeDef==storeError)
-			{
-				new->semTypeDef =storeError;
-			}
-			else
-			{*/
-				new->semTypeDef = symbol->type;
-				new->place = getNewTempOffset();
-				sprintf(new->code, "sw\t$t0,-996($sp)\nsw\t$t1,-992($sp)\nsw\t$t2,-988($sp)\nsw\t$t3,-984($sp)\nsw\t$t4,-980($sp)\nsw\t$t5,-976($sp)\nsw\t$t6,-972($sp)\nsw\t$t7,-968($sp)\nsw\t$ra,-964($sp)\n%sli\t$t0,100\nsub\t$sp,$sp,$t0\njal\t%s\nli\t$t0,100\nadd\t$sp,$sp,$t0\nlw\t$t0,-996($sp)\nlw\t$t1,-992($sp)\nlw\t$t2,-988($sp)\nlw\t$t3,-984($sp)\nlw\t$t4,-980($sp)\nlw\t$t5,-976($sp)\nlw\t$t6,-972($sp)\nlw\t$t7,-968($sp)\nlw\t$ra,-964($sp)\nsw\t$v0,%d($sp)\n",temp2->code,temp1->identLex,new->place);
-
-			//}
+			new->semTypeDef = symbol->type;
+			new->place = getNewTempOffset();
+			sprintf(new->code, "sw\t$t0,-996($sp)\nsw\t$t1,-992($sp)\nsw\t$t2,-988($sp)\nsw\t$t3,-984($sp)\nsw\t$t4,-980($sp)\nsw\t$t5,-976($sp)\nsw\t$t6,-972($sp)\nsw\t$t7,-968($sp)\nsw\t$ra,-964($sp)\n%sli\t$t0,100\nsub\t$sp,$sp,$t0\njal\t%s\nli\t$t0,100\nadd\t$sp,$sp,$t0\nlw\t$t0,-996($sp)\nlw\t$t1,-992($sp)\nlw\t$t2,-988($sp)\nlw\t$t3,-984($sp)\nlw\t$t4,-980($sp)\nlw\t$t5,-976($sp)\nlw\t$t6,-972($sp)\nlw\t$t7,-968($sp)\nlw\t$ra,-964($sp)\nsw\t$v0,%d($sp)\n",temp2->code,temp1->identLex,new->place);
 		}
-
 		$$ = new; 
 	}
 	;
@@ -2124,11 +2007,12 @@ procedureIdentifier :
 		$$ = new;
 	}
 	;
+
 actualParameterPart :
 	TOKEN_OPEN_BRACKET TOKEN_CLOSE_BRACKET
-	| TOKEN_OPEN_BRACKET actualParameterList TOKEN_CLOSE_BRACKET
+	|
+	TOKEN_OPEN_BRACKET actualParameterList TOKEN_CLOSE_BRACKET
 	{
-
 		Node *temp = $2;
 		if(temp->semTypeDef != storeError)
 		{		
@@ -2148,7 +2032,6 @@ actualParameterList :
 		new->dim = 0;
 		sprintf(new->code,"%slw\t$t0,%d($sp)\nsw\t$t0,%d($sp)\n",temp1->code,temp1->place,-100-4* new->dim);
 		new->semTypeDef = storeVoid;
-		
 		$$ = new;
 	}
 	|
@@ -2158,18 +2041,15 @@ actualParameterList :
 		Node *temp3 = $1;
 		Node *temp1 = $3;
 		Symbol* symbol= lookUp(temp->identLex,getCurrentScope());
-		
 		Node *new = createNode();
 		new->dim = 1 + temp3->dim;
-		if(temp3->semTypeDef == storeError)
+		if (temp3->semTypeDef == storeError)
 			new->semTypeDef = storeError;
-		else
-		{
+		else {
 			new->semTypeDef = storeVoid;
 			sprintf(new->code,"%s%slw\t$t0,%d($sp)\nsw\t$t0,%d($sp)\n",temp3->code,temp1->code,temp1->place,-100-4* new->dim);			
 		}	
 		$$ = new;
-
 	}
 	;
 
@@ -2187,8 +2067,10 @@ actualParameter :
 	}
 	;
 
-parameterDelimiter : TOKEN_COMMA
-	| TOKEN_CLOSE_BRACKET identifier TOKEN_COLON TOKEN_OPEN_BRACKET;
+parameterDelimiter :
+        TOKEN_COMMA
+	| TOKEN_CLOSE_BRACKET identifier TOKEN_COLON TOKEN_OPEN_BRACKET
+	;
 
 functionDesignator :
 	procedureIdentifier actualParameterPart
@@ -2197,29 +2079,17 @@ functionDesignator :
 		Node *temp1 = $1;
 		Node *temp2 = $2;
 		Symbol *symbol= lookUp(temp1->identLex,getCurrentScope());
-
 		if(symbol == NULL)
 		{
 			new->semTypeDef = storeError;
 		}
 		else
 		{
-			/*if(temp2->semTypeDef==storeError)
-			{
-				new->semTypeDef =storeError;
-			}
-			else
-			{*/
-				new->semTypeDef = symbol->type;
-				new->place = getNewTempOffset();
-				sprintf(new->code, "sw\t$t0,-996($sp)\nsw\t$t1,-992($sp)\nsw\t$t2,-988($sp)\nsw\t$t3,-984($sp)\nsw\t$t4,-980($sp)\nsw\t$t5,-976($sp)\nsw\t$t6,-972($sp)\nsw\t$t7,-968($sp)\nsw\t$ra,-964($sp)\n%sli\t$t0,100\nsub\t$sp,$sp,$t0\njal\t%s\nli\t$t0,100\nadd\t$sp,$sp,$t0\nlw\t$t0,-996($sp)\nlw\t$t1,-992($sp)\nlw\t$t2,-988($sp)\nlw\t$t3,-984($sp)\nlw\t$t4,-980($sp)\nlw\t$t5,-976($sp)\nlw\t$t6,-972($sp)\nlw\t$t7,-968($sp)\nlw\t$ra,-964($sp)\nsw\t$v0,%d($sp)\n",temp2->code,temp1->identLex,new->place);
-
-			//}
+			new->semTypeDef = symbol->type;
+			new->place = getNewTempOffset();
+			sprintf(new->code, "sw\t$t0,-996($sp)\nsw\t$t1,-992($sp)\nsw\t$t2,-988($sp)\nsw\t$t3,-984($sp)\nsw\t$t4,-980($sp)\nsw\t$t5,-976($sp)\nsw\t$t6,-972($sp)\nsw\t$t7,-968($sp)\nsw\t$ra,-964($sp)\n%sli\t$t0,100\nsub\t$sp,$sp,$t0\njal\t%s\nli\t$t0,100\nadd\t$sp,$sp,$t0\nlw\t$t0,-996($sp)\nlw\t$t1,-992($sp)\nlw\t$t2,-988($sp)\nlw\t$t3,-984($sp)\nlw\t$t4,-980($sp)\nlw\t$t5,-976($sp)\nlw\t$t6,-972($sp)\nlw\t$t7,-968($sp)\nlw\t$ra,-964($sp)\nsw\t$v0,%d($sp)\n",temp2->code,temp1->identLex,new->place);
 		}
-
 		$$ = new; 
-		
-
 	}
 	;
 
@@ -2264,14 +2134,7 @@ statement :
 		}
 		$$=newNode;
 	}
-/*	|
-	dummyStatement
-	{
-		Node* newNode=createNode();
-		$$=newNode;
-	}*/
 	;
-
 
 formalParameter :
 	identifier
@@ -2299,119 +2162,126 @@ formalParameter :
 	
 formalParameterList :
 	formalParameter
-	| formalParameterList parameterDelimiter formalParameter{   ////check/////
+	| formalParameterList parameterDelimiter formalParameter
+	{
 		$1=$0;
 		$2=$0;
 	}
 	;
 
 formalParameterPart :
-	empty {
+	empty
+	{
 		$$ = $0;
 	}
-	| TOKEN_OPEN_BRACKET {
+	| TOKEN_OPEN_BRACKET
+	{
 		$1 = $0;
-	} formalParameterList TOKEN_CLOSE_BRACKET{
-	};
+	}
+        formalParameterList TOKEN_CLOSE_BRACKET
+	;
 
 identifierList :
-	identifier {
+	identifier
+	{
 		Node *node1 = $0;
 		Node *node2 = $1;
 		Symbol *symbol1=lookUp(node2->identLex,getGlobalLevel() + 1);
-		if(symbol1 != NULL)
-		{
+		if (symbol1 != NULL) {
 			symbol1->type=node1->semTypeDef;		
 		}
-		else{
+		else {
 			printf("error: %s is absent from formal paramater",node2->identLex);
 		}
 		$$ = node1;
-		
 	}
-
-	| identifierList TOKEN_COMMA identifier{
+	| identifierList TOKEN_COMMA identifier
+	{
 		Node *node1 = $1;
 		Node *node2 = $3;
 		Symbol *symbol1=lookUp(node2->identLex,getGlobalLevel() + 1);
-		if(symbol1 != NULL)
-		{
+		if (symbol1 != NULL) {
 			symbol1->type=node1->semTypeDef;		
 		}
-		else{
+		else {
 			printf("error: %s is absent from formal paramater",node2->identLex);
 		}
 		$$ = node1;
+	}
+        ;
 
-	};
-
-valuePart :  TOKEN_VALUE identifierList TOKEN_SEMICOLON{
+valuePart :  TOKEN_VALUE identifierList TOKEN_SEMICOLON
+        {
 		$3 = $0;
 	}
 	| empty;
+
 specifier :
-	type{
-	}
+	type
 	| type TOKEN_ARRAY
 	| TOKEN_TYPE_LABEL 
 	| TOKEN_SWITCH 
 	| type TOKEN_PROCEDURE;
 
-specificationPart : empty
+specificationPart :
+        empty
 	| specificationIdentifierList;
 
-specificationIdentifierList : specifier identifierList TOKEN_SEMICOLON{
+specificationIdentifierList :
+        specifier identifierList TOKEN_SEMICOLON
+	{
 		Node *node1 = $1;
-
 	}
 	| specificationIdentifierList specifier identifierList TOKEN_SEMICOLON
-	{
-	};
+	;
 
 procedureHeading :
-	procedureIdentifier {
+	procedureIdentifier
+	{
 		Node *node = createNode();
 		node->type = procedureHeading;
 		node->pt0 = $1;
 		Node *node1 = $1;
 		node1->parent = node;
 		strcpy(node->identLex, node1->identLex);
-		if (lookUpInCurrentScope(node1->identLex, getCurrentScope()) == NULL){
+		if (lookUpInCurrentScope(node1->identLex, getCurrentScope()) == NULL) {
 		  Symbol * entry = addEntry(node1->identLex, getCurrentScope());
 			entry->procNumParam = 0;
 		}
 		$$ = node;
-	} formalParameterPart TOKEN_SEMICOLON {
-		$3 = $1;
-	} valuePart specificationPart{
 	}
+        formalParameterPart TOKEN_SEMICOLON
+	{
+		$3 = $1;
+	}
+        valuePart specificationPart
 	;
 
 procedureBody :
-	statement{//changed 16th april
-
+	statement
+	{
 		Node *new = createNode();
 		new->type = procedureBody;
 		Node *temp = $1;
 		new->semTypeDef = temp->semTypeDef;
 		strcpy(new->code,temp->code);
 		$$ = new;
-	};
+	}
+        ;
 
 procedureDeclaration : 
-	TOKEN_PROCEDURE procedureHeading procedureBody {
+	TOKEN_PROCEDURE procedureHeading procedureBody
+	{
 		Node *node1 = $2;
 		Node *node2 = $3;
-		Symbol* symbol = lookUp(node1->identLex, getCurrentScope());////check////
+		Symbol* symbol = lookUp(node1->identLex, getCurrentScope());
 		symbol->type = storeVoid;
-
 		Node *node = createNode();
 		node->type = procedureDeclaration;
-
-		if (node1->semTypeDef == storeVoid && node2->semTypeDef == storeVoid){
+		if (node1->semTypeDef == storeVoid && node2->semTypeDef == storeVoid) {
 			node->semTypeDef = storeVoid;
 		}
-		else{
+		else {
 			node->semTypeDef = storeError;
 		}
 		int label = getNewLabel();
@@ -2425,20 +2295,19 @@ procedureDeclaration :
 		Node *node3 = $1;
 		Symbol* symbol = lookUpInCurrentScope(node1->identLex, getCurrentScope());
 		symbol->type = node3->semTypeDef;
-
 		Node *node = createNode();
-       	node->type = procedureDeclaration;
-
-		if (node1->semTypeDef == storeVoid && node2->semTypeDef == storeVoid){
+		node->type = procedureDeclaration;
+		if (node1->semTypeDef == storeVoid && node2->semTypeDef == storeVoid) {
 			node->semTypeDef = node3->semTypeDef;
 		}
-		else{
+		else {
 			node->semTypeDef = storeError;
 		}
 		int label = getNewLabel();
 		sprintf(node->code,"b\tlabel%d\n%s:\n%s\njr $ra\nlabel%d:\n",label,node1->identLex,node2->code,label);		
 		$$ = node;
-	};
+	}
+        ;
 
 gotoStatement :
 	TOKEN_GOTO designationalExpression
@@ -2454,17 +2323,18 @@ switchDeclaration :
 
 switchList :
 	designationalExpression
-	| switchList TOKEN_COMMA designationalExpression
+	|
+	switchList TOKEN_COMMA designationalExpression
 	;
 
 switchIdentifier :
-	identifier{
+	identifier
+	{
 		Node *newNode = createNode();
 		newNode->type= switchIdentifier;
 		newNode->pt0=$1;
 		Node* tempNode = $1;
 		strcpy(newNode->identLex,tempNode->identLex);
-
 		$$=newNode;
 	}
 	;
@@ -2477,7 +2347,9 @@ designationalExpression :
 		strcpy(newNode->identLex,tempNode->identLex);
 		$$=newNode;
 	}
-	| ifClause simpleDesignationalExpression TOKEN_ELSE designationalExpression;
+	|
+	ifClause simpleDesignationalExpression TOKEN_ELSE designationalExpression
+	;
 
 simpleDesignationalExpression : 
 	tlabel
@@ -2487,10 +2359,14 @@ simpleDesignationalExpression :
 		strcpy(newNode->identLex,tempNode->identLex);
 		$$=newNode;
 	}
-	| switchDesignator
-	| TOKEN_OPEN_BRACKET designationalExpression TOKEN_CLOSE_BRACKET;
+	|
+	switchDesignator
+	|
+	TOKEN_OPEN_BRACKET designationalExpression TOKEN_CLOSE_BRACKET
+	;
 
 switchDesignator :
-	switchIdentifier TOKEN_OPEN_CURLY_BRACKET subscriptExpression TOKEN_CLOSE_CURLY_BRACKET ;
+	switchIdentifier TOKEN_OPEN_CURLY_BRACKET subscriptExpression TOKEN_CLOSE_CURLY_BRACKET
+	;
 
 %%
