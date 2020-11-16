@@ -8,16 +8,18 @@ Ideas
 TODOs
 =====
 
-* add backend for x86_64 asm code
+* add backend for mmix, x86_64 etc. asm code
+* add system test suite based on real historic code base
+* add missing features from Algol 60 specification
+* redesign code generation
 * extract backend
-* create a string builder component to collect generated code
-* replace statically allocated data structures with dynamic ones
+* redesign symbol table
 * cover components with unit tests
-* fix endless loop bug when compiling test0.algol
 
 DONE
 ====
 
+* fix endless loop bug when compiling test0.algol
 * fix tests that compare compiled files with originals
 * tree and symbolTable extracted as abstract data type components
 * switch to x86_64 executable
